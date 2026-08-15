@@ -96,6 +96,26 @@
   .kbtn.pick{outline:3px solid #fff}
   .kbtn:disabled{opacity:.35}
   .streak{font-family:"IBM Plex Mono"; font-size:15px; color:var(--mark)}
+  .qphone{
+    font-family:"Bricolage Grotesque"; font-weight:700; font-size:19px; line-height:1.35;
+    max-width:380px; color:var(--paper);
+  }
+  #fontBtn{
+    font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--paper);
+    background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    padding:6px 10px; cursor:pointer;
+  }
+  body.bigtext #fontBtn{border-color:var(--mark); color:var(--mark)}
+  body.bigtext .qphone{font-size:26px}
+  body.bigtext .kbtn .txt{font-size:21px}
+  body.bigtext .kbtn .shp{font-size:40px}
+  body.bigtext .kbtn{min-height:130px}
+  body.bigtext .ans{font-size:21px}
+  body.bigtext h2{font-size:30px}
+  body.bigtext .sub{font-size:18px}
+  body.bigtext #buzzState{font-size:20px}
+  body.bigtext #kTimer, body.bigtext #ansTimer{font-size:26px!important}
+  body.bigtext .resD{font-size:32px}
 
   .big{font-size:56px}
   .resD{font-family:"IBM Plex Mono"; font-size:26px}
@@ -110,7 +130,10 @@
 
 <header>
   <div class="t" id="whoami">NIGHT&#9679;WATCH</div>
-  <div class="sc mono" id="myScore"></div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <button id="fontBtn" title="Bigger text">Aa</button>
+    <div class="sc mono" id="myScore"></div>
+  </div>
 </header>
 
 <!-- JOIN -->
@@ -143,6 +166,7 @@
 <!-- ANSWER -->
 <section id="sAns">
   <h2>You're on the helm!</h2>
+  <div class="qphone" id="aQ"></div>
   <div id="ansTimer"></div>
   <div class="ansbtns" id="ansBtns"></div>
 </section>
@@ -150,6 +174,7 @@
 <!-- ALL-PLAY -->
 <section id="sK">
   <h2 id="kTitle">Lock in your answer</h2>
+  <div class="qphone" id="kQ"></div>
   <div id="kTimer" class="mono" style="font-size:20px;color:var(--mark)"></div>
   <div class="kgrid" id="kGrid"></div>
   <p class="sub" id="kState"></p>
@@ -218,6 +243,13 @@ function show(id) { document.querySelectorAll("section").forEach(s => s.classLis
 function setScore(s) { myScore = s; $("myScore").textContent = "PTS " + s; }
 function vibrate(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
 
+/* big-text toggle (for crew with tired eyes) */
+try { if (localStorage.getItem("nwq_big") === "1") document.body.classList.add("bigtext"); } catch (e) {}
+$("fontBtn").onclick = () => {
+  const on = document.body.classList.toggle("bigtext");
+  try { localStorage.setItem("nwq_big", on ? "1" : "0"); } catch (e) {}
+};
+
 /* horn picker */
 const grid = $("hornGrid");
 Object.entries(HORNS).forEach(([k, h], i) => {
@@ -272,7 +304,8 @@ function onMsg(m) {
       { g: "▲", c: "#E5484D" }, { g: "◆", c: "#1E6FD9" },
       { g: "●", c: "#E8930C" }, { g: "■", c: "#2EBB6E" }
     ];
-    $("kTitle").textContent = "Q" + m.qnum + " · Lock in your answer";
+    $("kTitle").textContent = "Q" + m.qnum + (m.lvl ? " · " + m.lvl : "");
+    $("kQ").textContent = m.q || "";
     $("kState").textContent = "Faster answers score more — streaks pay bonus.";
     $("kGrid").innerHTML = "";
     let picked = false;
@@ -301,6 +334,7 @@ function onMsg(m) {
   if (m.t === "won") {
     vibrate([80, 40, 80]);
     playHorn(mySound);
+    $("aQ").textContent = m.q || "";
     $("ansBtns").innerHTML = "";
     m.opts.forEach((o, i) => {
       const b = document.createElement("button");
