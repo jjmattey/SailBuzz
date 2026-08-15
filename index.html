@@ -245,7 +245,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="mqtt.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="qrcode.js"></script>
 <script src="audio.js"></script>
 <script src="gfx.js"></script>
 <script src="questions.js"></script>
@@ -288,7 +288,14 @@ function connectBroker(i) {
     url.search = "?g=" + code + "&b=" + i;
     $("joinUrl").textContent = url.toString();
     $("qr").innerHTML = "";
-    new QRCode($("qr"), { text: url.toString(), width: 240, height: 240, colorDark: "#060D18", colorLight: "#EDE6D6" });
+    try {
+      const q = qrcode(0, "M"); q.addData(url.toString()); q.make();
+      $("qr").innerHTML = q.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+      const qs = $("qr").querySelector("svg");
+      qs.style.width = "240px"; qs.style.height = "240px"; qs.style.background = "#EDE6D6"; qs.style.borderRadius = "8px";
+    } catch (e) {
+      $("qr").innerHTML = '<div style="max-width:300px;font-size:15px;line-height:1.5">QR unavailable — phones: open<br><b style="word-break:break-all">' + url.toString() + "</b></div>";
+    }
   });
   c.on("message", (topic, payload) => {
     try { const m = JSON.parse(payload.toString()); if (m && m.from) handleMsg(String(m.from), m); } catch (e) {}
