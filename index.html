@@ -71,6 +71,20 @@
   .btn.ghost{background:transparent; color:var(--dim); border:1px solid var(--line); font-size:15px}
   .btn.ghost:hover{color:var(--paper)}
   .hint{font-size:14px; color:var(--dim); max-width:560px}
+  .moderow{display:flex; gap:12px; flex-wrap:wrap; justify-content:center}
+  .modebtn{
+    display:flex; flex-direction:column; gap:6px; align-items:flex-start; text-align:left;
+    width:300px; padding:14px 16px; border-radius:14px; cursor:pointer;
+    border:1px solid var(--line); background:var(--panel); color:var(--paper); font-family:"Archivo";
+  }
+  .modebtn b{font-family:"Bricolage Grotesque"; font-size:17px}
+  .modebtn span{font-size:13px; color:var(--dim)}
+  .modebtn.sel{border-color:var(--mark); background:rgba(255,200,69,.08); box-shadow:0 0 18px rgba(255,200,69,.10)}
+  .opt .key.shp{color:#fff; border:none; font-size:15px}
+  .opt .cnt{
+    margin-left:auto; font-family:"IBM Plex Mono"; font-size:14px; color:var(--dim);
+    border:1px solid var(--line); border-radius:6px; padding:2px 8px;
+  }
 
   /* ---------- GAME ---------- */
   #game{flex:1; display:none; min-height:0}
@@ -180,6 +194,10 @@
     <div class="qrwrap"><div id="qr"></div></div>
     <div class="joinurl mono" id="joinUrl">starting signal server…</div>
     <div class="crewrow" id="crewRow"></div>
+    <div class="moderow">
+      <button class="modebtn sel" id="modeAll"><b>&#127912; All-play</b><span>Everyone answers on their phone — faster correct answers score more, streaks pay bonus</span></button>
+      <button class="modebtn" id="modeBuzz"><b>&#128680; Buzzer race</b><span>First horn in answers alone — wrong costs points and the rest can steal</span></button>
+    </div>
     <button class="btn" id="startBtn" disabled>Cast off — start the quiz</button>
     <p class="hint">Each phone picks a horn. When a question appears, hit your buzzer — first horn sounds and that phone gets the answer buttons. Right answers earn points, wrong ones cost you and hand the buzzers back to everyone else.</p>
   </section>
@@ -300,7 +318,7 @@ function handleMsg(pid, m) {
       rec.pid = pid; rec.online = true; rec.sound = sound;
       if (winnerId === existing[0]) winnerId = pid;
     } else {
-      rec = { pid, online: true, name: String(m.name).slice(0, 14), sound, score: 0, locked: false };
+      rec = { pid, online: true, name: String(m.name).slice(0, 14), sound, score: 0, locked: false, streak: 0 };
     }
     players.set(pid, rec);
 
@@ -326,12 +344,34 @@ function handleMsg(pid, m) {
   if (m.t === "ans" && phase === "BUZZED" && pid === winnerId) {
     judge(pid, m.i);
   }
+
+  if (m.t === "ans" && phase === "ANSWERING") {
+    const p = players.get(pid);
+    if (!p || !p.online || answers.has(pid)) return;
+    answers.set(pid, { i: m.i, ms: Date.now() - qStart });
+    $("statusTxt").innerHTML = "&#127912; Answer on your phones… <b>" + answers.size + " / " + activeIds().length + "</b> locked in";
+    if (answers.size >= activeIds().length) finishAllplay();
+  }
 }
 
 /* ============ game flow ============ */
-$("startBtn").onclick = () => { unlockAudio(); order = shuffle(QUESTIONS.map((_, i) => i)); qi = -1; for (const p of players.values()) p.score = 0; nextQuestion(); };
+let mode = "all";                 // "all" (Kahoot-style) | "buzz" (buzzer race)
+const QT = 20;                    // seconds per all-play question
+const ALLPTS = { CC: 100, DS: 150, CS: 200 };
+const SHAPES = [
+  { g: "&#9650;", c: "#E5484D" },   // triangle red
+  { g: "&#9670;", c: "#1E6FD9" },   // diamond blue
+  { g: "&#9679;", c: "#E8930C" },   // circle amber
+  { g: "&#9632;", c: "#2EBB6E" }    // square green
+];
+let answers = new Map(), qStart = 0;
+
+$("modeAll").onclick  = () => { mode = "all";  $("modeAll").classList.add("sel"); $("modeBuzz").classList.remove("sel"); };
+$("modeBuzz").onclick = () => { mode = "buzz"; $("modeBuzz").classList.add("sel"); $("modeAll").classList.remove("sel"); };
+
+$("startBtn").onclick = () => { unlockAudio(); order = shuffle(QUESTIONS.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; } nextQuestion(); };
 $("nextBtn").onclick = () => nextQuestion();
-$("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); };
+$("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); else if (phase === "ANSWERING") finishAllplay(); };
 $("endBtn").onclick = () => endQuiz();
 $("againBtn").onclick = () => { $("podium").classList.remove("active"); $("startBtn").onclick(); };
 
@@ -344,8 +384,8 @@ function nextQuestion() {
   const idx = shuffle(src.opts.map((_, i) => i));
   cur = { lvl: src.lvl, q: src.q, gfx: src.gfx || null, opts: idx.map(i => src.opts[i]), a: idx.indexOf(src.a) };
   winnerId = null;
+  answers = new Map(); qStart = Date.now();
   for (const p of players.values()) p.locked = false;
-  phase = "ARMED";
 
   $("lobby").style.display = "none";
   $("game").classList.add("active");
@@ -354,16 +394,62 @@ function nextQuestion() {
   const L = LEVELS[cur.lvl];
   const b = $("qBadge"); b.textContent = L.label; b.style.color = L.color;
   $("qNum").textContent = "Q " + (qi + 1) + " / " + order.length;
-  $("qStake").innerHTML = '<span class="up">+' + L.pts + "</span> · <span class=\"dn\">&minus;" + L.pen + "</span>";
+  $("qStake").innerHTML = mode === "all"
+    ? '<span class="up">up to +' + ALLPTS[cur.lvl] + "</span> · faster = more"
+    : '<span class="up">+' + L.pts + "</span> · <span class=\"dn\">&minus;" + L.pen + "</span>";
   $("qText").textContent = cur.q;
   const gbox = $("qGfx");
   if (cur.gfx) { gbox.style.display = "block"; gbox.innerHTML = renderGfx(cur.gfx); }
   else { gbox.style.display = "none"; gbox.innerHTML = ""; }
   $("qOpts").innerHTML = cur.opts.map((o, i) =>
-    '<div class="opt" id="opt' + i + '"><span class="key">' + "ABCD"[i] + "</span><span>" + esc(o) + "</span></div>").join("");
+    '<div class="opt" id="opt' + i + '"><span class="key shp" style="background:' + SHAPES[i].c + '">' + SHAPES[i].g + "</span><span>" + esc(o) + '</span><span class="cnt" id="cnt' + i + '" style="display:none"></span></div>').join("");
 
-  setLamp("armed"); $("statusTxt").textContent = "Buzzers armed — hit your horn!"; $("timer").textContent = "";
-  broadcast({ t: "arm", qnum: qi + 1, total: order.length });
+  if (mode === "all") {
+    phase = "ANSWERING";
+    setLamp("armed");
+    $("statusTxt").innerHTML = "&#127912; Answer on your phones… <b>0 / " + activeIds().length + "</b> locked in";
+    broadcast({ t: "q", opts: cur.opts, secs: QT, qnum: qi + 1, total: order.length });
+    startCountdown(QT, finishAllplay);
+  } else {
+    phase = "ARMED";
+    setLamp("armed"); $("statusTxt").textContent = "Buzzers armed — hit your horn!"; $("timer").textContent = "";
+    broadcast({ t: "arm", qnum: qi + 1, total: order.length });
+  }
+  renderBoard();
+}
+
+/* ---- all-play scoring: base × (1 − t/2T), streak bonus +10%/consecutive (max +50%) ---- */
+function finishAllplay() {
+  if (phase !== "ANSWERING") return;
+  phase = "REVEAL"; stopCountdown(); setLamp("idle");
+  const base = ALLPTS[cur.lvl];
+  const counts = [0, 0, 0, 0];
+  let fastest = null;
+
+  for (const id of activeIds()) {
+    const p = players.get(id);
+    const a = answers.get(id);
+    if (a) counts[a.i] = (counts[a.i] || 0) + 1;
+    if (a && a.i === cur.a) {
+      const speed = Math.max(0, 1 - (a.ms / 1000) / (2 * QT));
+      let pts = Math.round(base * Math.max(0.5, speed));
+      p.streak = (p.streak || 0) + 1;
+      const bonus = Math.round(base * 0.1 * Math.min(p.streak - 1, 5));
+      pts += bonus;
+      p.score += pts; p.delta = "+" + pts;
+      if (!fastest || a.ms < fastest.ms) fastest = { name: p.name, ms: a.ms, pts };
+      send(p, { t: "judge", ok: true, delta: pts, score: p.score, streak: p.streak });
+    } else {
+      p.streak = 0;
+      p.delta = null;
+      send(p, { t: "judge", ok: false, delta: 0, score: p.score, streak: 0, noans: !a, correctText: cur.opts[cur.a] });
+    }
+  }
+  const el = $("opt" + cur.a); if (el) el.classList.add("correct");
+  counts.forEach((c, i) => { const e = $("cnt" + i); if (e) { e.style.display = "inline-block"; e.textContent = c + (c === 1 ? " vote" : " votes"); } });
+  $("statusTxt").innerHTML = fastest
+    ? "&#9989; Fastest right answer: <b>" + esc(fastest.name) + "</b> in " + (fastest.ms / 1000).toFixed(1) + "s (+" + fastest.pts + ")"
+    : "&#127754; Nobody got that one — tough question!";
   renderBoard();
 }
 
