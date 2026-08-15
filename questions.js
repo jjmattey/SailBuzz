@@ -145,5 +145,49 @@ const QUESTIONS = [
     opts: ["Clockwise, e.g. SW to W to NW", "Anticlockwise, e.g. W to SW to S", "It will strengthen", "It will die away"], a: 0 },
 
   { lvl: "CS", q: "Your COURSE TO STEER differs from your ground track because it allows for…",
-    opts: ["Tidal stream and leeway", "Magnetic dip", "Boat speed only", "GPS satellite error"], a: 0 }
+    opts: ["Tidal stream and leeway", "Magnetic dip", "Boat speed only", "GPS satellite error"], a: 0 },
+
+  /* ---------- DAYTIME ---------- */
+  { lvl: "CC", q: "Two sailing yachts approaching on opposite tacks by day. Who gives way?",
+    opts: ["The yacht on PORT tack", "The yacht on STARBOARD tack", "The smaller yacht", "The faster yacht"], a: 0 },
+
+  { lvl: "CC", q: "You're overtaking a slower yacht on a sunny afternoon. Who keeps clear?",
+    opts: ["You — the overtaking vessel always keeps clear", "The slower boat must speed up", "The boat on port tack", "Whoever is under engine"], a: 0 },
+
+  { lvl: "CC", q: "A single black BALL hoisted forward on a yacht by day means…",
+    opts: ["She is at anchor", "She is racing", "Diver down", "She requires assistance"], a: 0,
+    gfx: { type: "shapes", style: "ball" } },
+
+  { lvl: "DS", q: "A yacht with sails up shows this black cone, point down. She is…",
+    opts: ["Sailing AND motoring — treat her as a power vessel", "Racing", "Fishing", "Aground"], a: 0,
+    gfx: { type: "shapes", style: "cone" } },
+
+  { lvl: "DS", q: "One SHORT blast from a vessel ahead in daylight means…",
+    opts: ["\"I am altering course to STARBOARD\"", "\"I am altering course to PORT\"", "\"I am going astern\"", "\"I intend to overtake you\""], a: 0 },
+
+  { lvl: "DS", q: "Sail meets power in open water on a clear day. As a rule of thumb…",
+    opts: ["Power gives way to sail — with big-ship exceptions", "Sail always gives way to power", "Whoever is faster gives way", "Both must stop"], a: 0 },
+
+  { lvl: "DS", q: "Two black balls in a vertical line by day. \"Two balls…\"",
+    opts: ["Vessel NOT UNDER COMMAND", "Vessel at anchor", "Vessel trawling", "Pilot vessel"], a: 0,
+    gfx: { type: "shapes", style: "ball2" } },
+
+  { lvl: "DS", q: "Three SHORT blasts from the ferry leaving the berth means…",
+    opts: ["\"My engines are going ASTERN\"", "\"I am turning to starboard\"", "\"Keep clear, I am constrained\"", "\"I am about to anchor\""], a: 0 },
+
+  { lvl: "CS", q: "THREE black balls in a vertical line by day. She is…",
+    opts: ["AGROUND", "Not under command", "At anchor over 100m", "Restricted in her ability to manoeuvre"], a: 0,
+    gfx: { type: "shapes", style: "ball3" } },
+
+  { lvl: "CS", q: "Ball — DIAMOND — ball hoisted by day means…",
+    opts: ["Restricted in her ability to manoeuvre", "Constrained by her draught", "Minesweeping", "Towing over 200m"], a: 0,
+    gfx: { type: "shapes", style: "bdb" } },
+
+  { lvl: "CS", q: "A tug and her tow BOTH show a black diamond by day. The diamond tells you…",
+    opts: ["The tow is longer than 200 metres", "The tow is carrying dangerous cargo", "The tug has right of way", "The tow is unmanned"], a: 0,
+    gfx: { type: "shapes", style: "diamond" } },
+
+  { lvl: "CS", q: "Two cones with their APEXES together, hoisted by day. She is…",
+    opts: ["Fishing", "Motor-sailing", "Dredging", "A pilot vessel"], a: 0,
+    gfx: { type: "shapes", style: "cones2" } }
 ];
