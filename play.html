@@ -96,6 +96,14 @@
   .kbtn.pick{outline:3px solid #fff}
   .kbtn:disabled{opacity:.35}
   .streak{font-family:"IBM Plex Mono"; font-size:15px; color:var(--mark)}
+  .fiftybtn{
+    font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--mark);
+    background:transparent; border:1.5px dashed var(--mark); border-radius:10px;
+    padding:9px 14px; cursor:pointer; margin:2px 0;
+  }
+  .fiftybtn:disabled{opacity:.35; border-style:solid; cursor:default}
+  .kbtn.cut, .ans.cut{opacity:.18; filter:grayscale(1)}
+  body.bigtext .fiftybtn{font-size:18px; padding:12px 16px}
   .qphone{
     font-family:"Bricolage Grotesque"; font-weight:700; font-size:19px; line-height:1.35;
     max-width:380px; color:var(--paper);
@@ -168,6 +176,7 @@
   <h2>You're on the helm!</h2>
   <div class="qphone" id="aQ"></div>
   <div id="ansTimer"></div>
+  <button class="fiftybtn" id="fiftyA">&#9986;&#65039; 50:50 &#183; knock out two wrong answers</button>
   <div class="ansbtns" id="ansBtns"></div>
 </section>
 
@@ -176,6 +185,7 @@
   <h2 id="kTitle">Lock in your answer</h2>
   <div class="qphone" id="kQ"></div>
   <div id="kTimer" class="mono" style="font-size:20px;color:var(--mark)"></div>
+  <button class="fiftybtn" id="fiftyK">&#9986;&#65039; 50:50 &#183; knock out two wrong answers</button>
   <div class="kgrid" id="kGrid"></div>
   <p class="sub" id="kState"></p>
 </section>
@@ -244,6 +254,16 @@ function show(id) { document.querySelectorAll("section").forEach(s => s.classLis
 function setScore(s) { myScore = s; $("myScore").textContent = "PTS " + s; }
 function vibrate(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
 
+/* 50:50 lifeline — once per game, validated by the host */
+let usedFifty = false;
+function fiftyLabel() {
+  const label = usedFifty ? "&#9986;&#65039; 50:50 &#183; used this game" : "&#9986;&#65039; 50:50 &#183; knock out two wrong answers";
+  ["fiftyK", "fiftyA"].forEach(id => { $(id).innerHTML = label; $(id).disabled = usedFifty; });
+}
+function requestFifty() { if (usedFifty) return; sendHost({ t: "fifty" }); }
+$("fiftyK").onclick = requestFifty;
+$("fiftyA").onclick = requestFifty;
+
 /* big-text toggle (for crew with tired eyes) */
 try { if (localStorage.getItem("nwq_big") === "1") document.body.classList.add("bigtext"); } catch (e) {}
 $("fontBtn").onclick = () => {
@@ -290,6 +310,7 @@ function onMsg(m) {
   if (m.t === "wait") { $("waitTitle").textContent = "Hold fast"; $("waitMsg").textContent = "A question is in play — you'll get the next one."; show("sWait"); }
 
   if (m.t === "arm") {
+    if (m.qnum === 1) { usedFifty = false; }
     armed = !m.locked;
     $("buzzBtn").disabled = !!m.locked;
     $("buzzState").innerHTML = m.locked
@@ -301,6 +322,8 @@ function onMsg(m) {
 
   if (m.t === "q") {   /* all-play: everyone answers */
     vibrate(60); unlockAudio();
+    if (m.qnum === 1) usedFifty = false;
+    fiftyLabel();
     const SH = [
       { g: "▲", c: "#E5484D" }, { g: "◆", c: "#1E6FD9" },
       { g: "●", c: "#E8930C" }, { g: "■", c: "#2EBB6E" }
@@ -319,6 +342,7 @@ function onMsg(m) {
         sendHost({ t: "ans", i });
         playHorn(mySound); vibrate(70);
         document.querySelectorAll(".kbtn").forEach((x, k) => { x.disabled = true; if (k === i) x.classList.add("pick"); });
+        $("fiftyK").disabled = true;
         $("kState").textContent = "Locked in — waiting for the rest of the crew…";
       };
       $("kGrid").appendChild(b);
@@ -336,6 +360,7 @@ function onMsg(m) {
     vibrate([80, 40, 80]);
     playHorn(mySound);
     $("aQ").textContent = m.q || "";
+    fiftyLabel();
     $("ansBtns").innerHTML = "";
     m.opts.forEach((o, i) => {
       const b = document.createElement("button");
@@ -347,6 +372,17 @@ function onMsg(m) {
     let s = m.secs; $("ansTimer").textContent = s + "s";
     const iv = setInterval(() => { s--; if (s <= 0 || !$("sAns").classList.contains("active")) { clearInterval(iv); $("ansTimer").textContent = ""; } else $("ansTimer").textContent = s + "s"; }, 1000);
     show("sAns");
+  }
+
+  if (m.t === "fifty") {
+    if (m.used) { usedFifty = true; fiftyLabel(); return; }
+    if (!m.drop || !m.drop.length) return;
+    usedFifty = true; fiftyLabel();
+    vibrate([40, 30, 40]);
+    m.drop.forEach(i => {
+      const k = $("kGrid").children[i]; if (k) { k.disabled = true; k.classList.add("cut"); }
+      const a = $("ansBtns").children[i]; if (a) { a.disabled = true; a.classList.add("cut"); }
+    });
   }
 
   if (m.t === "lost") {
