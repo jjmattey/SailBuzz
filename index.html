@@ -244,7 +244,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="mqtt.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="audio.js"></script>
 <script src="gfx.js"></script>
@@ -271,7 +271,9 @@ let phase = "LOBBY";         // LOBBY | ARMED | BUZZED | REVEAL | END
 let order = [], qi = -1, cur = null, winnerId = null, countdown = null, secsLeft = 0;
 
 function connectBroker(i) {
-  if (i >= BROKERS.length) { $("joinUrl").textContent = "Couldn't reach a signal server — check the laptop's internet and refresh."; return; }
+  if (typeof mqtt === "undefined") { $("joinUrl").textContent = "⚠ Couldn't load mqtt.min.js — make sure it was uploaded to the repo alongside index.html, then refresh."; return; }
+  if (i >= BROKERS.length) { $("joinUrl").textContent = "⚠ Couldn't reach a signal server (tried " + BROKERS.length + "). Check the laptop's internet / firewall allows secure WebSockets, then refresh."; return; }
+  $("joinUrl").textContent = "Connecting to signal server " + (i + 1) + " of " + BROKERS.length + "…";
   const c = mqtt.connect(BROKERS[i], {
     clientId: "nwqh_" + code + "_" + Math.random().toString(36).slice(2, 8),
     keepalive: 20, clean: true, connectTimeout: 6000, reconnectPeriod: 2000
