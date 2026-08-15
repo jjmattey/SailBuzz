@@ -212,6 +212,78 @@ function gfxShapes(g) {
   return dayScene(vessel + shapes + `<text x="24" y="322" class="gfx-cap day">DAY SHAPE(S) HOISTED WHERE BEST SEEN</text>`, waterY - 4);
 }
 
+/* Dashboard warning lamp in a dark instrument cluster */
+function gfxDash(g) {
+  const RED = "#FF4757", AMBER = "#FFC845";
+  const arcs = `
+    <path d="M 120 250 A 130 130 0 0 1 340 155" stroke="#233246" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M 460 155 A 130 130 0 0 1 680 250" stroke="#233246" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M 132 244 A 118 118 0 0 1 210 172" stroke="#3B5573" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M 590 172 A 118 118 0 0 1 668 244" stroke="#3B5573" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+  let sym = "", c = RED;
+  if (g.light === "battery") sym = `
+    <rect x="-42" y="-22" width="84" height="52" rx="7" fill="none" stroke="${c}" stroke-width="7"/>
+    <rect x="-30" y="-32" width="16" height="10" fill="${c}"/><rect x="14" y="-32" width="16" height="10" fill="${c}"/>
+    <line x1="-26" y1="6" x2="-10" y2="6" stroke="${c}" stroke-width="6"/>
+    <line x1="10" y1="6" x2="26" y2="6" stroke="${c}" stroke-width="6"/><line x1="18" y1="-2" x2="18" y2="14" stroke="${c}" stroke-width="6"/>`;
+  if (g.light === "oil") sym = `
+    <path d="M -34 -6 L 18 -6 L 18 -20 L 30 -20 L 30 -6 L 52 8 L 44 16 L 30 6 L 30 22 L -34 22 Z" fill="none" stroke="${c}" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M -34 0 Q -52 -2 -56 -14" stroke="${c}" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <circle cx="58" cy="30" r="5" fill="${c}"/>`;
+  if (g.light === "coolant") sym = `
+    <line x1="0" y1="-34" x2="0" y2="8" stroke="${c}" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="0" cy="18" r="12" fill="${c}"/>
+    <line x1="8" y1="-28" x2="20" y2="-28" stroke="${c}" stroke-width="5"/><line x1="8" y1="-14" x2="20" y2="-14" stroke="${c}" stroke-width="5"/><line x1="8" y1="0" x2="20" y2="0" stroke="${c}" stroke-width="5"/>
+    <path d="M -52 36 q 10 -9 20 0 t 20 0 t 20 0 t 20 0 t 20 0" stroke="${c}" stroke-width="6" fill="none" stroke-linecap="round"/>`;
+  if (g.light === "tyre") { c = AMBER; sym = `
+    <path d="M -34 -26 L -34 18 Q -34 34 -14 34 L 14 34 Q 34 34 34 18 L 34 -26" fill="none" stroke="${c}" stroke-width="8" stroke-linecap="round"/>
+    <line x1="-42" y1="-14" x2="-34" y2="-10" stroke="${c}" stroke-width="5"/><line x1="42" y1="-14" x2="34" y2="-10" stroke="${c}" stroke-width="5"/>
+    <line x1="-42" y1="2" x2="-34" y2="6" stroke="${c}" stroke-width="5"/><line x1="42" y1="2" x2="34" y2="6" stroke="${c}" stroke-width="5"/>
+    <line x1="0" y1="-14" x2="0" y2="8" stroke="${c}" stroke-width="8" stroke-linecap="round"/><circle cx="0" cy="20" r="5" fill="${c}"/>`; }
+  return `<svg viewBox="0 0 800 340" class="gfx-svg" role="img">
+    ${GFX_DEFS}
+    <rect width="800" height="340" fill="#070B11"/>
+    <rect x="60" y="70" width="680" height="230" rx="26" fill="#0C1420" stroke="#1E3049" stroke-width="2"/>
+    ${arcs}
+    <g transform="translate(400,195) scale(1.5)" filter="url(#glow)">${sym}</g>
+    <text x="80" y="322" class="gfx-cap">INSTRUMENT CLUSTER · WARNING LAMP LIT WHILE DRIVING</text>
+  </svg>`;
+}
+
+/* Hot hatch side profile with one highlighted part, on a road */
+function gfxCar(g) {
+  const hi = "#FF6B1A", body = "#24425F", line = "#1B3E5E";
+  const H = (cond) => cond ? `fill="${hi}" filter="url(#softglow)"` : "";
+  const wheel = (x, highlight) => `
+    <circle cx="${x}" cy="236" r="34" fill="#101820" stroke="${line}" stroke-width="3"/>
+    <circle cx="${x}" cy="236" r="20" ${highlight ? `fill="${hi}" filter="url(#softglow)"` : `fill="#9FB4C6"`} stroke="#5E7A96" stroke-width="2"/>
+    ${[0,72,144,216,288].map(a => `<line x1="${x}" y1="236" x2="${x + 17*Math.cos(a*Math.PI/180)}" y2="${236 + 17*Math.sin(a*Math.PI/180)}" stroke="${highlight ? "#B44A0E" : "#5E7A96"}" stroke-width="3"/>`).join("")}
+    <circle cx="${x}" cy="236" r="5" fill="#33475C"/>`;
+  const inner = `
+    <!-- road -->
+    <rect y="262" width="800" height="78" fill="#3A4450"/>
+    <line x1="0" y1="300" x2="800" y2="300" stroke="#E8E2D2" stroke-width="4" stroke-dasharray="34 26"/>
+    <!-- body: nose to the right -->
+    <path d="M 178 236 L 186 196 Q 200 172 250 166 L 300 128 Q 316 114 356 112 L 470 112 Q 512 116 540 146 L 566 170 Q 626 176 642 192 Q 652 206 648 226 L 640 236 L 606 236 A 40 40 0 0 0 526 236 L 288 236 A 40 40 0 0 0 208 236 Z"
+      fill="${body}" stroke="${line}" stroke-width="3"/>
+    <!-- windows -->
+    <path d="M 312 130 Q 324 120 356 119 L 396 119 L 396 162 L 288 162 Z" fill="#BFDCEF" stroke="${line}" stroke-width="2"/>
+    <path d="M 408 119 L 464 119 Q 498 123 520 148 L 532 162 L 408 162 Z" fill="#BFDCEF" stroke="${line}" stroke-width="2"/>
+    <!-- bonnet -->
+    <path d="M 540 146 Q 560 160 566 170 Q 626 176 642 192 L 648 202 Q 596 186 556 184 L 536 184 Q 534 162 540 146 Z" ${g.part === "bonnet" ? H(true) : `fill="${body}"`} stroke="${line}" stroke-width="2"/>
+    <!-- roof spoiler -->
+    <path d="M 300 128 L 268 118 L 264 128 L 296 136 Z" ${g.part === "spoiler" ? H(true) : `fill="${body}"`} stroke="${line}" stroke-width="2"/>
+    <!-- exhaust -->
+    <rect x="168" y="244" width="30" height="12" rx="5" ${g.part === "exhaust" ? H(true) : `fill="#5E7A96"`} stroke="${line}" stroke-width="2"/>
+    <!-- lights -->
+    <path d="M 636 196 Q 650 202 648 214 L 630 212 Z" fill="#FFE9A8" stroke="${line}"/>
+    <path d="M 186 200 L 200 198 L 198 212 L 184 212 Z" fill="#E5484D" stroke="${line}"/>
+    ${wheel(248, g.part === "wheel")}
+    ${wheel(566, false)}
+    <text x="24" y="326" class="gfx-cap" style="fill:#C6D6E4">HOT HATCH · SIDE PROFILE · PART HIGHLIGHTED IN ORANGE</text>`;
+  return dayScene(inner, 262);
+}
+
 function renderGfx(g) {
   if (!g) return "";
   switch (g.type) {
@@ -221,6 +293,8 @@ function renderGfx(g) {
     case "sailrose": return gfxSailRose();
     case "flagA":    return gfxFlagA();
     case "shapes":   return gfxShapes(g);
+    case "dash":     return gfxDash(g);
+    case "car":      return gfxCar(g);
     default: return "";
   }
 }
