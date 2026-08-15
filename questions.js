@@ -323,8 +323,133 @@ const CAR_QUESTIONS = [
     gfx: { type: "car", part: "wheel" } }
 ];
 
+/* ==================== SHOWROOM PACK — models & engines ==================== */
+const SHOW_LEVELS = {
+  SR: { label: "SHOWROOM",  pts: 10, pen: 5,  base: 100, color: "#2EE38A" },
+  TU: { label: "TUNER",     pts: 15, pen: 7,  base: 150, color: "#FFC845" },
+  CO: { label: "COLLECTOR", pts: 20, pen: 10, base: 200, color: "#FF4757" }
+};
+
+const SHOW_QUESTIONS = [
+  /* ---------- SHOWROOM ---------- */
+  { lvl: "SR", q: "Which 1976 hatchback kicked off the hot-hatch craze?",
+    opts: ["VW Golf GTI", "Ford Escort XR3", "Peugeot 205 GTI", "Renault 5 Turbo"], a: 0 },
+
+  { lvl: "SR", q: "The original Mini was designed by…",
+    opts: ["Alec Issigonis", "Colin Chapman", "William Lyons", "Giorgetto Giugiaro"], a: 0 },
+
+  { lvl: "SR", q: "The Porsche 911 famously uses this engine layout. What is it?",
+    opts: ["Flat-six (boxer)", "V6", "Straight-six", "V8"], a: 0,
+    gfx: { type: "engine", layout: "flat6" } },
+
+  { lvl: "SR", q: "The VW Beetle kept its engine…",
+    opts: ["In the back, air-cooled", "Up front, water-cooled", "In the middle", "Under the boot floor, front-mid"], a: 0 },
+
+  { lvl: "SR", q: "Which car does James Bond drive in Goldfinger?",
+    opts: ["Aston Martin DB5", "Jaguar E-Type", "Lotus Esprit", "Bentley Continental"], a: 0 },
+
+  { lvl: "SR", q: "The first mass-produced hybrid car was the…",
+    opts: ["Toyota Prius", "Honda Insight", "Nissan Leaf", "Chevrolet Volt"], a: 0 },
+
+  { lvl: "SR", q: "Enzo Ferrari reportedly called this \"the most beautiful car ever made\"…",
+    opts: ["Jaguar E-Type", "Lamborghini Miura", "Ferrari 250 GTO", "Alfa Romeo Spider"], a: 0 },
+
+  { lvl: "SR", q: "The Reliant Robin is famous for having…",
+    opts: ["Three wheels", "No reverse gear", "A wooden chassis", "Two engines"], a: 0 },
+
+  { lvl: "SR", q: "The classic American muscle-car engine layout shown here is a…",
+    opts: ["V8", "Flat-eight", "Straight-eight", "W8"], a: 0,
+    gfx: { type: "engine", layout: "v8" } },
+
+  { lvl: "SR", q: "Which company builds the Defender?",
+    opts: ["Land Rover", "Jeep", "Toyota", "Suzuki"], a: 0 },
+
+  { lvl: "SR", q: "The world's best-selling two-seat sports car is the…",
+    opts: ["Mazda MX-5", "Porsche Boxster", "Toyota MR2", "Fiat 124 Spider"], a: 0 },
+
+  { lvl: "SR", q: "The last Ferrari personally approved by Enzo before his death was the…",
+    opts: ["F40", "Testarossa", "288 GTO", "F50"], a: 0 },
+
+  /* ---------- TUNER ---------- */
+  { lvl: "TU", q: "Mazda's RX-7 used this unusual engine. What is it?",
+    opts: ["A Wankel rotary", "A two-stroke triple", "A radial", "A turbine"], a: 0,
+    gfx: { type: "engine", layout: "rotary" } },
+
+  { lvl: "TU", q: "The Mk4 Toyota Supra's legendary engine code is…",
+    opts: ["2JZ-GTE", "RB26DETT", "SR20DET", "K20A"], a: 0 },
+
+  { lvl: "TU", q: "The Nissan Skyline GT-R (R32–R34) was powered by the…",
+    opts: ["RB26DETT twin-turbo straight-six", "VQ35 V6", "SR20 four", "VR38 V6"], a: 0 },
+
+  { lvl: "TU", q: "BMW built its reputation on this silky engine layout…",
+    opts: ["Straight-six", "V6", "Flat-six", "V12 only"], a: 0,
+    gfx: { type: "engine", layout: "i6" } },
+
+  { lvl: "TU", q: "The Bugatti Veyron's engine is a quad-turbo…",
+    opts: ["8.0-litre W16", "6.0-litre V12", "8.0-litre V10", "7.0-litre W12"], a: 0 },
+
+  { lvl: "TU", q: "Which supercar was developed with input from Ayrton Senna?",
+    opts: ["Honda NSX", "Ferrari F355", "Porsche 959", "Jaguar XJ220"], a: 0 },
+
+  { lvl: "TU", q: "The Lamborghini Miura is celebrated as the first…",
+    opts: ["Mid-engined V12 supercar", "Four-wheel-drive supercar", "Carbon-fibre car", "Turbocharged Lamborghini"], a: 0 },
+
+  { lvl: "TU", q: "Ford's GT40 famously finished 1-2-3 at Le Mans in 1966, beating…",
+    opts: ["Ferrari", "Porsche", "Jaguar", "Aston Martin"], a: 0 },
+
+  { lvl: "TU", q: "The Audi Quattro changed rallying in 1980 by bringing…",
+    opts: ["Four-wheel drive", "Turbocharging", "Sequential gearboxes", "Carbon brakes"], a: 0 },
+
+  { lvl: "TU", q: "The Citroën DS amazed 1955 crowds with its…",
+    opts: ["Hydropneumatic self-levelling suspension", "Rotary engine", "Four-wheel steering", "Gas turbine"], a: 0 },
+
+  { lvl: "TU", q: "Subaru's characteristic engine rumble comes from its…",
+    opts: ["Flat-four boxer layout", "V6 layout", "Five-cylinder layout", "Supercharger"], a: 0 },
+
+  { lvl: "TU", q: "Lamborghini names most of its cars after…",
+    opts: ["Fighting bulls", "Italian towns", "Winds", "Founders' children"], a: 0 },
+
+  /* ---------- COLLECTOR ---------- */
+  { lvl: "CO", q: "The Mercedes 300SL Gullwing was the first production car with…",
+    opts: ["Fuel injection", "Disc brakes", "A turbocharger", "Anti-lock brakes"], a: 0 },
+
+  { lvl: "CO", q: "The McLaren F1's V12 was built by…",
+    opts: ["BMW", "Honda", "Mercedes", "McLaren themselves"], a: 0 },
+
+  { lvl: "CO", q: "What made the McLaren F1's cabin unique?",
+    opts: ["A central driving seat with a passenger each side", "No windscreen", "Tandem seating", "A removable steering wheel"], a: 0 },
+
+  { lvl: "CO", q: "Chevrolet's classic \"350\" small-block V8 displaces roughly…",
+    opts: ["5.7 litres", "3.5 litres", "7.0 litres", "4.6 litres"], a: 0 },
+
+  { lvl: "CO", q: "The winningest engine in Formula 1 history is the…",
+    opts: ["Cosworth DFV", "Ferrari flat-12", "Honda RA168E", "Renault EF15"], a: 0 },
+
+  { lvl: "CO", q: "Honda's S2000 (F20C) was famous for making about…",
+    opts: ["120 bhp per litre without a turbo", "200 bhp per litre with twin turbos", "60 bhp per litre", "90 bhp per litre with a supercharger"], a: 0 },
+
+  { lvl: "CO", q: "The Pagani Zonda is powered by an engine from…",
+    opts: ["Mercedes-AMG", "Ferrari", "BMW M", "Lamborghini"], a: 0 },
+
+  { lvl: "CO", q: "The Lexus LFA needed a digital rev counter because…",
+    opts: ["Its V10 revved too fast for an analogue needle", "Analogue dials were banned in Japan", "It had no alternator", "The V10 vibrated too much"], a: 0 },
+
+  { lvl: "CO", q: "Koenigsegg builds its hypercars in…",
+    opts: ["Sweden", "Germany", "Switzerland", "Denmark"], a: 0 },
+
+  { lvl: "CO", q: "The first production car to top 300 mph was the…",
+    opts: ["Bugatti Chiron Super Sport 300+", "Koenigsegg Agera RS", "Hennessey Venom GT", "SSC Ultimate Aero"], a: 0 },
+
+  { lvl: "CO", q: "Porsche's all-conquering 917 Le Mans racer used a…",
+    opts: ["Flat-twelve", "V12", "Flat-six", "V10"], a: 0 },
+
+  { lvl: "CO", q: "The BMW E30 M3's high-revving engine was unusual for an M3 because it was a…",
+    opts: ["Four-cylinder", "V8", "Straight-six", "V6"], a: 0 }
+];
+
 /* ==================== PACK REGISTRY ==================== */
 const PACKS = {
   sail: { name: "Night Watch — Sailing", icon: "\u26F5",  levels: SAIL_LEVELS, questions: SAIL_QUESTIONS },
-  cars: { name: "Pit Lane — Petrolheads", icon: "\uD83C\uDFCE\uFE0F", levels: CAR_LEVELS, questions: CAR_QUESTIONS }
+  cars: { name: "Pit Lane — Petrolheads", icon: "\uD83C\uDFCE\uFE0F", levels: CAR_LEVELS, questions: CAR_QUESTIONS },
+  show: { name: "Showroom — Models & Engines", icon: "\uD83D\uDD27", levels: SHOW_LEVELS, questions: SHOW_QUESTIONS }
 };
