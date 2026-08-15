@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Night Watch — Buzzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sea:#060D18; --panel:#0D1826; --panel2:#0A1420; --line:#1E3049;
+    --paper:#EDE6D6; --dim:#8FA3BC; --port:#FF4757; --stbd:#2EE38A; --mark:#FFC845;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(600px 300px at 50% -5%, #0E2138 0%, transparent 60%), var(--sea);
+    color:var(--paper); font-family:"Archivo",system-ui,sans-serif;
+    display:flex; flex-direction:column; min-height:100dvh; overflow:hidden;
+    user-select:none; -webkit-user-select:none;
+  }
+  .mono{font-family:"IBM Plex Mono",monospace}
+  header{display:flex; justify-content:space-between; align-items:center; padding:12px 18px; border-bottom:1px solid var(--line)}
+  header .t{font-family:"Bricolage Grotesque"; font-weight:800; font-size:16px}
+  header .sc{font-family:"IBM Plex Mono"; color:var(--mark); font-size:15px}
+  section{flex:1; display:none; flex-direction:column; align-items:center; justify-content:center; padding:22px; gap:18px; text-align:center}
+  section.active{display:flex}
+  h2{font-family:"Bricolage Grotesque"; font-weight:800; font-size:24px}
+  .sub{color:var(--dim); font-size:14px; max-width:300px}
+
+  input[type=text]{
+    width:100%; max-width:300px; font-size:18px; padding:14px; border-radius:12px;
+    border:1px solid var(--line); background:var(--panel); color:var(--paper);
+    text-align:center; font-family:"Archivo"; outline:none;
+  }
+  input[type=text]:focus{border-color:var(--mark)}
+  .horns{display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:320px}
+  .horn{
+    border:1px solid var(--line); background:var(--panel); color:var(--paper);
+    border-radius:14px; padding:14px 8px; font-family:"Archivo"; font-weight:600; font-size:14px;
+    display:flex; flex-direction:column; gap:6px; align-items:center; cursor:pointer;
+  }
+  .horn .ic{font-size:26px}
+  .horn.sel{border-color:var(--mark); background:rgba(255,200,69,.10); box-shadow:0 0 18px rgba(255,200,69,.12)}
+  .horn .tap{font-family:"IBM Plex Mono"; font-size:10px; color:var(--dim)}
+  .btn{
+    font-family:"Bricolage Grotesque"; font-weight:700; font-size:18px; color:var(--sea);
+    background:var(--mark); border:none; border-radius:12px; padding:14px 34px; cursor:pointer;
+  }
+  .btn:disabled{opacity:.35}
+
+  /* buzzer */
+  #buzzWrap{position:relative; width:min(72vw,320px); aspect-ratio:1}
+  #buzzBtn{
+    position:absolute; inset:0; border-radius:50%; border:none; cursor:pointer;
+    font-family:"Bricolage Grotesque"; font-weight:800; font-size:30px; letter-spacing:.05em;
+    color:#2A0508; background:radial-gradient(circle at 35% 30%, #FF7A85, var(--port) 60%, #B41E2B);
+    box-shadow:0 0 60px rgba(255,71,87,.45), 0 10px 0 #7E1620, inset 0 -8px 20px rgba(0,0,0,.35);
+    transition:transform .08s, box-shadow .2s, filter .3s;
+    touch-action:manipulation;
+  }
+  #buzzBtn:active{transform:translateY(8px); box-shadow:0 0 70px rgba(255,71,87,.6), 0 2px 0 #7E1620}
+  #buzzBtn:disabled{filter:grayscale(.85) brightness(.55); box-shadow:0 6px 0 #222; cursor:default}
+  .ring{position:absolute; inset:-12px; border-radius:50%; border:2px dashed var(--line); animation:spin 24s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #buzzState{font-size:16px; min-height:44px; color:var(--dim); max-width:320px}
+  #buzzState b{color:var(--paper)}
+  .hornnote{font-family:"IBM Plex Mono"; font-size:12px; color:var(--dim)}
+
+  /* answers */
+  .ansbtns{display:flex; flex-direction:column; gap:12px; width:100%; max-width:360px}
+  .ans{
+    display:flex; gap:12px; align-items:center; text-align:left;
+    border:1px solid var(--line); background:var(--panel); color:var(--paper);
+    border-radius:14px; padding:16px; font-size:16px; font-weight:600; font-family:"Archivo"; cursor:pointer;
+  }
+  .ans .key{
+    font-family:"IBM Plex Mono"; color:var(--mark); border:1px solid var(--line); border-radius:8px;
+    width:34px; height:34px; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .ans:active{border-color:var(--mark)}
+  #ansTimer{font-family:"IBM Plex Mono"; font-size:20px; color:var(--mark)}
+
+  .big{font-size:56px}
+  .resD{font-family:"IBM Plex Mono"; font-size:26px}
+  .resD.up{color:var(--stbd)} .resD.dn{color:var(--port)}
+  .flash-good{animation:fgood .8s} .flash-bad{animation:fbad .8s}
+  @keyframes fgood{0%{background:rgba(46,227,138,.35)}100%{background:transparent}}
+  @keyframes fbad{0%{background:rgba(255,71,87,.35)}100%{background:transparent}}
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="t" id="whoami">NIGHT&#9679;WATCH</div>
+  <div class="sc mono" id="myScore"></div>
+</header>
+
+<!-- JOIN -->
+<section id="sJoin" class="active">
+  <h2>Come aboard</h2>
+  <p class="sub">Name yourself, pick your horn (tap twice to hear it), and join the watch.</p>
+  <input type="text" id="nameIn" maxlength="14" placeholder="Crew name" autocomplete="off">
+  <div class="horns" id="hornGrid"></div>
+  <button class="btn" id="joinBtn">Join the crew</button>
+  <p class="sub mono" id="joinErr" style="color:var(--port)"></p>
+</section>
+
+<!-- WAIT -->
+<section id="sWait">
+  <div class="big">&#9873;</div>
+  <h2 id="waitTitle">Aboard!</h2>
+  <p class="sub" id="waitMsg">Waiting for the skipper to start… keep this screen open.</p>
+</section>
+
+<!-- BUZZER -->
+<section id="sBuzz">
+  <div id="buzzWrap">
+    <div class="ring"></div>
+    <button id="buzzBtn">BUZZ</button>
+  </div>
+  <div id="buzzState">Read the question on the big screen…</div>
+  <div class="hornnote" id="hornNote"></div>
+</section>
+
+<!-- ANSWER -->
+<section id="sAns">
+  <h2>You're on the helm!</h2>
+  <div id="ansTimer"></div>
+  <div class="ansbtns" id="ansBtns"></div>
+</section>
+
+<!-- RESULT -->
+<section id="sRes">
+  <div class="big" id="resIcon"></div>
+  <h2 id="resTitle"></h2>
+  <div class="resD" id="resDelta"></div>
+  <p class="sub" id="resMsg"></p>
+</section>
+
+<!-- END -->
+<section id="sEnd">
+  <div class="big" id="endIcon"></div>
+  <h2 id="endTitle"></h2>
+  <p class="sub" id="endMsg"></p>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script src="audio.js"></script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const code = (new URLSearchParams(location.search).get("g") || "").toUpperCase();
+let conn = null, mySound = "fog", myName = "", myScore = 0, armed = false;
+
+function show(id) { document.querySelectorAll("section").forEach(s => s.classList.remove("active")); $(id).classList.add("active"); }
+function setScore(s) { myScore = s; $("myScore").textContent = "PTS " + s; }
+function vibrate(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
+
+/* horn picker */
+const grid = $("hornGrid");
+Object.entries(HORNS).forEach(([k, h], i) => {
+  const b = document.createElement("button");
+  b.className = "horn" + (i === 0 ? " sel" : "");
+  b.innerHTML = '<span class="ic">' + h.icon + "</span>" + h.label + '<span class="tap">TAP AGAIN TO HEAR</span>';
+  b.onclick = () => {
+    unlockAudio();
+    if (mySound === k) playHorn(k);
+    mySound = k;
+    document.querySelectorAll(".horn").forEach(x => x.classList.remove("sel"));
+    b.classList.add("sel");
+  };
+  grid.appendChild(b);
+});
+
+/* join */
+$("joinBtn").onclick = () => {
+  unlockAudio();
+  myName = $("nameIn").value.trim();
+  if (!myName) { $("joinErr").textContent = "Give yourself a name first, sailor."; return; }
+  if (!code) { $("joinErr").textContent = "No boarding code — scan the QR on the big screen."; return; }
+  $("joinBtn").disabled = true; $("joinErr").textContent = "Hailing the mothership…";
+  connect();
+};
+
+function connect() {
+  const peer = new Peer({ debug: 1 });
+  peer.on("open", () => {
+    conn = peer.connect("nwq-" + code, { reliable: true });
+    conn.on("open", () => conn.send({ t: "join", name: myName, sound: mySound }));
+    conn.on("data", onMsg);
+    conn.on("close", () => { $("waitTitle").textContent = "Signal lost"; $("waitMsg").textContent = "The big screen closed or the link dropped. Rescan the QR to rejoin — your score is kept."; show("sWait"); });
+  });
+  peer.on("error", (e) => {
+    $("joinBtn").disabled = false;
+    $("joinErr").textContent = e.type === "peer-unavailable" ? "Can't find that quiz — is the big screen open? Check the code." : "Connection error: " + e.type;
+    show("sJoin");
+  });
+}
+
+function onMsg(m) {
+  if (m.t === "hello") {
+    mySound = m.sound; setScore(m.score);
+    $("whoami").textContent = HORNS[mySound].icon + " " + myName.toUpperCase();
+    $("hornNote").textContent = "YOUR HORN: " + m.horn.toUpperCase();
+    playHorn(mySound);
+  }
+  if (m.t === "phase" && m.p === "lobby") { $("waitTitle").textContent = "Aboard!"; $("waitMsg").textContent = "Waiting for the skipper to start… keep this screen open."; show("sWait"); }
+  if (m.t === "wait") { $("waitTitle").textContent = "Hold fast"; $("waitMsg").textContent = "A question is in play — you'll get the next one."; show("sWait"); }
+
+  if (m.t === "arm") {
+    armed = !m.locked;
+    $("buzzBtn").disabled = !!m.locked;
+    $("buzzState").innerHTML = m.locked
+      ? "You're <b>locked out</b> of this question — wrong answer. Next one's yours."
+      : "Buzzers <b>ARMED</b> — read the big screen and hit it!";
+    show("sBuzz");
+    if (!m.locked) vibrate(60);
+  }
+
+  if (m.t === "won") {
+    vibrate([80, 40, 80]);
+    playHorn(mySound);
+    $("ansBtns").innerHTML = "";
+    m.opts.forEach((o, i) => {
+      const b = document.createElement("button");
+      b.className = "ans";
+      b.innerHTML = '<span class="key">' + "ABCD"[i] + "</span><span>" + o.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) + "</span>";
+      b.onclick = () => { conn.send({ t: "ans", i }); $("ansTimer").textContent = ""; };
+      $("ansBtns").appendChild(b);
+    });
+    let s = m.secs; $("ansTimer").textContent = s + "s";
+    const iv = setInterval(() => { s--; if (s <= 0 || !$("sAns").classList.contains("active")) { clearInterval(iv); $("ansTimer").textContent = ""; } else $("ansTimer").textContent = s + "s"; }, 1000);
+    show("sAns");
+  }
+
+  if (m.t === "lost") {
+    armed = false; $("buzzBtn").disabled = true;
+    $("buzzState").innerHTML = "&#9888;&#65039; <b>" + m.name + "</b> beat you to it…";
+    show("sBuzz");
+  }
+
+  if (m.t === "lockout") {
+    $("buzzBtn").disabled = true;
+    $("buzzState").innerHTML = "You're <b>locked out</b> of this question. Next one's yours.";
+    show("sBuzz");
+  }
+
+  if (m.t === "judge") {
+    setScore(m.score);
+    document.body.classList.remove("flash-good", "flash-bad");
+    void document.body.offsetWidth;
+    document.body.classList.add(m.ok ? "flash-good" : "flash-bad");
+    $("resIcon").textContent = m.ok ? "⚓" : "🌊";
+    $("resTitle").textContent = m.ok ? "Correct — well helmed!" : "Wrong — into the drink!";
+    $("resDelta").textContent = (m.delta > 0 ? "+" : "") + m.delta + " pts";
+    $("resDelta").className = "resD " + (m.ok ? "up" : "dn");
+    $("resMsg").textContent = m.ok ? "Eyes on the big screen for the next question." : "You're locked out of this one — the rest of the crew can steal it.";
+    if (m.ok) playHorn("bell"); vibrate(m.ok ? 120 : [60, 60, 60]);
+    show("sRes");
+  }
+
+  if (m.t === "reveal") {
+    if (!$("sRes").classList.contains("active")) {
+      $("resIcon").textContent = "🧭";
+      $("resTitle").textContent = "Answer: " + m.a;
+      $("resDelta").textContent = ""; $("resDelta").className = "resD";
+      $("resMsg").textContent = m.text + " — next question coming up on the big screen.";
+      show("sRes");
+    }
+  }
+
+  if (m.t === "end") {
+    const medal = ["🥇", "🥈", "🥉"][m.place - 1] || "⚓";
+    $("endIcon").textContent = medal;
+    $("endTitle").textContent = m.place === 1 ? "You have the helm!" : "Placed " + m.place + " of " + m.of;
+    $("endMsg").textContent = "Final score: " + m.score + " pts. " + (m.place === 1 ? "First round at the bar is on the losers." : "There's always the next tide.");
+    setScore(m.score);
+    if (m.place === 1) playHorn(mySound);
+    show("sEnd");
+  }
+}
+
+/* the buzzer itself */
+$("buzzBtn").addEventListener("pointerdown", () => {
+  if (!armed || $("buzzBtn").disabled) return;
+  armed = false;
+  unlockAudio(); playHorn(mySound); vibrate(90);
+  conn.send({ t: "buzz" });
+  $("buzzState").innerHTML = "&#128226; Horn sounded — waiting on the skipper's screen…";
+});
+</script>
+</body>
+</html>
