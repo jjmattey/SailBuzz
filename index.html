@@ -337,7 +337,7 @@ function handleMsg(pid, m) {
     if (!p || p.locked) return;
     phase = "BUZZED"; winnerId = pid;
     playHorn(p.sound);
-    send(p, { t: "won", opts: cur.opts, secs: 20 });
+    send(p, { t: "won", q: cur.q, opts: cur.opts, secs: 20 });
     broadcast({ t: "lost", name: p.name }, pid);
     setLamp("buzzed"); $("statusTxt").innerHTML = "&#9888;&#65039; <b>" + esc(p.name) + "</b> buzzed in — answering on their phone…";
     startCountdown(20, () => judge(winnerId, -1));
@@ -410,7 +410,7 @@ function nextQuestion() {
     phase = "ANSWERING";
     setLamp("armed");
     $("statusTxt").innerHTML = "&#127912; Answer on your phones… <b>0 / " + activeIds().length + "</b> locked in";
-    broadcast({ t: "q", opts: cur.opts, secs: QT, qnum: qi + 1, total: order.length });
+    broadcast({ t: "q", q: cur.q, lvl: LEVELS[cur.lvl].label, opts: cur.opts, secs: QT, qnum: qi + 1, total: order.length });
     startCountdown(QT, finishAllplay);
   } else {
     phase = "ARMED";
@@ -449,10 +449,11 @@ function finishAllplay() {
   }
   const el = $("opt" + cur.a); if (el) el.classList.add("correct");
   counts.forEach((c, i) => { const e = $("cnt" + i); if (e) { e.style.display = "inline-block"; e.textContent = c + (c === 1 ? " vote" : " votes"); } });
-  $("statusTxt").innerHTML = fastest
+  $("statusTxt").innerHTML = (fastest
     ? "&#9989; Fastest right answer: <b>" + esc(fastest.name) + "</b> in " + (fastest.ms / 1000).toFixed(1) + "s (+" + fastest.pts + ")"
-    : "&#127754; Nobody got that one — tough question!";
+    : "&#127754; Nobody got that one — tough question!") + ' <span class="mono" style="color:var(--dim)">· next question in…</span>';
   renderBoard();
+  startCountdown(8, nextQuestion);
 }
 
 function judge(id, i) {
@@ -487,9 +488,11 @@ function reveal(pickedIdx) {
   phase = "REVEAL"; stopCountdown();
   const el = $("opt" + cur.a); if (el) el.classList.add("correct");
   setLamp("idle");
-  if (pickedIdx === null) $("statusTxt").innerHTML = "Answer revealed — <b>" + "ABCD"[cur.a] + "</b>. On to the next one.";
+  if (pickedIdx === null) $("statusTxt").innerHTML = "Answer revealed — <b>" + "ABCD"[cur.a] + "</b>.";
+  $("statusTxt").innerHTML += ' <span class="mono" style="color:var(--dim)">· next question in…</span>';
   broadcast({ t: "reveal", a: "ABCD"[cur.a], text: cur.opts[cur.a] });
   renderBoard();
+  startCountdown(8, nextQuestion);
 }
 
 function endQuiz() {
