@@ -1,14 +1,14 @@
-/* Night Watch Quiz — question bank
-   lvl: CC (Competent Crew), DS (Day Skipper), CS (Coastal Skipper)
-   a: index of the correct option in opts */
+/* Night Watch Quiz — question packs
+   Each pack: levels (label, buzzer pts/pen, all-play base) + questions.
+   a: index of the correct option in opts (options are shuffled per game) */
 
-const LEVELS = {
-  CC: { label: "COMPETENT CREW", pts: 10, pen: 5,  color: "#2EE38A" },
-  DS: { label: "DAY SKIPPER",    pts: 15, pen: 7,  color: "#FFC845" },
-  CS: { label: "COASTAL SKIPPER",pts: 20, pen: 10, color: "#FF4757" }
+const SAIL_LEVELS = {
+  CC: { label: "COMPETENT CREW", pts: 10, pen: 5,  base: 100, color: "#2EE38A" },
+  DS: { label: "DAY SKIPPER",    pts: 15, pen: 7,  base: 150, color: "#FFC845" },
+  CS: { label: "COASTAL SKIPPER",pts: 20, pen: 10, base: 200, color: "#FF4757" }
 };
 
-const QUESTIONS = [
+const SAIL_QUESTIONS = [
   /* ---------- COMPETENT CREW ---------- */
   { lvl: "CC", q: "Facing the bow, which side of the boat is PORT?",
     opts: ["The left side", "The right side", "The windward side", "The side nearest the pontoon"], a: 0 },
@@ -191,3 +191,140 @@ const QUESTIONS = [
     opts: ["Fishing", "Motor-sailing", "Dredging", "A pilot vessel"], a: 0,
     gfx: { type: "shapes", style: "cones2" } }
 ];
+
+/* ==================== PETROLHEADS PACK ==================== */
+const CAR_LEVELS = {
+  EZ: { label: "LEARNER",     pts: 10, pen: 5,  base: 100, color: "#2EE38A" },
+  EN: { label: "ENTHUSIAST",  pts: 15, pen: 7,  base: 150, color: "#FFC845" },
+  PH: { label: "PETROLHEAD",  pts: 20, pen: 10, base: 200, color: "#FF4757" }
+};
+
+const CAR_QUESTIONS = [
+  /* ---------- LEARNER ---------- */
+  { lvl: "EZ", q: "In a right-hand-drive manual, which pedal is the CLUTCH?",
+    opts: ["The left one", "The middle one", "The right one", "There isn't one"], a: 0 },
+
+  { lvl: "EZ", q: "This lamp comes on while you're driving. What's it telling you?",
+    opts: ["Charging system fault — the battery isn't being charged", "Battery is fully charged", "Headlights are on", "Key fob battery is low"], a: 0,
+    gfx: { type: "dash", light: "battery" } },
+
+  { lvl: "EZ", q: "This red lamp lights up at speed. What do you do?",
+    opts: ["Stop as soon as it's safe — oil pressure is low", "Carry on, it's just a service reminder", "Top up the washer fluid", "Turn the heater on"], a: 0,
+    gfx: { type: "dash", light: "oil" } },
+
+  { lvl: "EZ", q: "What does RPM on the rev counter measure?",
+    opts: ["Engine revolutions per minute", "Road speed", "Fuel burn per mile", "Tyre rotations"], a: 0 },
+
+  { lvl: "EZ", q: "The badge with the prancing horse belongs to…",
+    opts: ["Ferrari", "Porsche", "Lamborghini", "Mustang"], a: 0 },
+
+  { lvl: "EZ", q: "What does ABS stand for?",
+    opts: ["Anti-lock Braking System", "Automatic Brake Servo", "All-wheel Balance System", "Auxiliary Battery Supply"], a: 0 },
+
+  { lvl: "EZ", q: "Which part of the car is highlighted in orange?",
+    opts: ["The bonnet", "The boot", "The bumper", "The sill"], a: 0,
+    gfx: { type: "car", part: "bonnet" } },
+
+  { lvl: "EZ", q: "A car's handbrake usually acts on which wheels?",
+    opts: ["The rear wheels", "The front wheels", "All four", "Whichever are spinning"], a: 0 },
+
+  { lvl: "EZ", q: "What does a turbocharger actually do?",
+    opts: ["Forces more air into the engine for more power", "Adds more fuel to the tank", "Makes the exhaust quieter", "Cools the brakes"], a: 0 },
+
+  { lvl: "EZ", q: "In the UK, a car needs its first MOT when it's how old?",
+    opts: ["3 years", "1 year", "5 years", "10 years"], a: 0 },
+
+  { lvl: "EZ", q: "\"0–60\" is a measure of a car's…",
+    opts: ["Acceleration", "Top speed", "Braking distance", "Fuel economy"], a: 0 },
+
+  { lvl: "EZ", q: "This amber lamp with the exclamation mark means…",
+    opts: ["Low tyre pressure — check your tyres", "Handbrake is on", "Low screenwash", "Door open"], a: 0,
+    gfx: { type: "dash", light: "tyre" } },
+
+  /* ---------- ENTHUSIAST ---------- */
+  { lvl: "EN", q: "Torque, in plain terms, is…",
+    opts: ["The engine's twisting force", "The engine's top speed", "How fast the wheels spin", "The weight over the front axle"], a: 0 },
+
+  { lvl: "EN", q: "Where does a Porsche 911 keep its engine?",
+    opts: ["Behind the rear axle", "Under the bonnet", "Behind the seats, mid-mounted", "Under the boot floor, front-mid"], a: 0 },
+
+  { lvl: "EN", q: "UNDERSTEER is when…",
+    opts: ["The front tyres lose grip and the car runs wide", "The rear steps out", "The car leans in corners", "The steering feels heavy at speed"], a: 0 },
+
+  { lvl: "EN", q: "Heel-and-toe is a technique for…",
+    opts: ["Rev-matching downshifts while braking", "Parallel parking", "Launching off the line", "Saving fuel on motorways"], a: 0 },
+
+  { lvl: "EN", q: "This red lamp means…",
+    opts: ["Engine overheating — coolant temperature too high", "Air-con is on max", "Heated seats active", "Frost warning"], a: 0,
+    gfx: { type: "dash", light: "coolant" } },
+
+  { lvl: "EN", q: "A limited-slip differential helps by…",
+    opts: ["Sharing drive across an axle so one spinning wheel doesn't waste it", "Locking the gearbox in gear", "Slipping the clutch automatically", "Limiting top speed"], a: 0 },
+
+  { lvl: "EN", q: "Which part of the car is highlighted in orange?",
+    opts: ["The rear spoiler", "The roof rail", "The diffuser", "The aerial"], a: 0,
+    gfx: { type: "car", part: "spoiler" } },
+
+  { lvl: "EN", q: "Jackie Stewart's famous nickname for the Nürburgring Nordschleife…",
+    opts: ["The Green Hell", "The Widowmaker", "The Ring of Fire", "The Devil's Playground"], a: 0 },
+
+  { lvl: "EN", q: "Bentley is owned by which group?",
+    opts: ["Volkswagen Group", "BMW Group", "Stellantis", "Tata"], a: 0 },
+
+  { lvl: "EN", q: "E10 petrol at UK pumps contains up to…",
+    opts: ["10% ethanol", "10% extra octane", "10% diesel", "10% water"], a: 0 },
+
+  { lvl: "EN", q: "The APEX of a corner is…",
+    opts: ["The point where you clip the inside of the bend", "The fastest part of the straight", "The braking point", "The crest of a hill"], a: 0 },
+
+  { lvl: "EN", q: "The REDLINE marks…",
+    opts: ["The maximum safe engine speed", "The oil temperature limit", "The speed limit", "Maximum boost pressure"], a: 0 },
+
+  { lvl: "EN", q: "Which part of the car is highlighted in orange?",
+    opts: ["The exhaust tailpipe", "The fuel filler", "The tow hook", "The rear fog light"], a: 0,
+    gfx: { type: "car", part: "exhaust" } },
+
+  /* ---------- PETROLHEAD ---------- */
+  { lvl: "PH", q: "Why do engineers love a straight-six engine?",
+    opts: ["It's inherently balanced — primary and secondary forces cancel", "It's the lightest layout", "It never needs oil changes", "It always makes more power than a V8"], a: 0 },
+
+  { lvl: "PH", q: "A flat-plane-crank V8 is famous for…",
+    opts: ["Revving high with a shrieking exhaust note, like Ferrari's", "A lazy low-rev burble", "Running without balance shafts at low revs only", "Being unusable over 5,000 rpm"], a: 0 },
+
+  { lvl: "PH", q: "Who designed the McLaren F1?",
+    opts: ["Gordon Murray", "Adrian Newey", "Colin Chapman", "Ross Brawn"], a: 0 },
+
+  { lvl: "PH", q: "Group B rallying was banned after which season?",
+    opts: ["1986", "1979", "1992", "1969"], a: 0 },
+
+  { lvl: "PH", q: "Honda's VTEC changes what as the revs climb?",
+    opts: ["Valve timing and lift", "Turbo boost pressure", "The compression ratio", "The firing order"], a: 0 },
+
+  { lvl: "PH", q: "Ackermann steering geometry means…",
+    opts: ["The inside wheel turns tighter than the outside in a corner", "Both fronts always stay parallel", "The rears steer opposite the fronts", "The steering self-centres"], a: 0 },
+
+  { lvl: "PH", q: "A monocoque is…",
+    opts: ["A structure where the body itself carries the loads", "A separate ladder chassis", "A single-cylinder engine", "A one-piece carbon wheel"], a: 0 },
+
+  { lvl: "PH", q: "DRS in Formula 1 works by…",
+    opts: ["Opening a flap in the rear wing to cut drag", "Boosting the hybrid deployment", "Softening the suspension", "Widening the front wing"], a: 0 },
+
+  { lvl: "PH", q: "The first hybrid to win Le Mans outright (2012) was…",
+    opts: ["Audi R18 e-tron quattro", "Toyota TS030", "Porsche 919", "Peugeot 908"], a: 0 },
+
+  { lvl: "PH", q: "Each tyre grips the road through a contact patch roughly the size of…",
+    opts: ["Your palm", "A dinner plate", "A bath towel", "A coin"], a: 0 },
+
+  { lvl: "PH", q: "The car snaps into OVERSTEER mid-corner. Classic correction?",
+    opts: ["Steer into the slide and ease the throttle smoothly", "Brake hard and steer away from the slide", "Pull the handbrake", "Accelerate flat out"], a: 0 },
+
+  { lvl: "PH", q: "Which part of the car is highlighted in orange?",
+    opts: ["The alloy wheel", "The brake disc", "The wheel-arch liner", "The hub cap"], a: 0,
+    gfx: { type: "car", part: "wheel" } }
+];
+
+/* ==================== PACK REGISTRY ==================== */
+const PACKS = {
+  sail: { name: "Night Watch — Sailing", icon: "\u26F5",  levels: SAIL_LEVELS, questions: SAIL_QUESTIONS },
+  cars: { name: "Pit Lane — Petrolheads", icon: "\uD83C\uDFCE\uFE0F", levels: CAR_LEVELS, questions: CAR_QUESTIONS }
+};
