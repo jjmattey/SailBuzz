@@ -223,7 +223,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="audio.js"></script>
 <script src="gfx.js"></script>
@@ -236,74 +236,95 @@ const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i >
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2600); }
 
-/* ============ room + peer ============ */
+/* ============ room + signalling (MQTT over WebSockets) ============ */
 const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const code = Array.from({ length: 4 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join("");
 $("codeTxt").textContent = code;
 
-const players = new Map();   // peerId -> {conn, name, sound, score, locked}
+const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
+const BASE = "nightwatch1/" + code;
+let client = null;
+
+const players = new Map();   // pid -> {pid, online, name, sound, score, locked}
 let phase = "LOBBY";         // LOBBY | ARMED | BUZZED | REVEAL | END
 let order = [], qi = -1, cur = null, winnerId = null, countdown = null, secsLeft = 0;
 
-const peer = new Peer("nwq-" + code, { debug: 1 });
-peer.on("open", () => {
-  const url = new URL("play.html", location.href);
-  url.search = "?g=" + code;
-  $("joinUrl").textContent = url.toString();
-  new QRCode($("qr"), { text: url.toString(), width: 240, height: 240, colorDark: "#060D18", colorLight: "#EDE6D6" });
-});
-peer.on("error", (e) => {
-  if (e.type === "unavailable-id") { location.reload(); return; }
-  toast("Connection issue: " + e.type + " — check your internet");
-});
-peer.on("connection", (conn) => {
-  conn.on("data", (m) => handleMsg(conn, m));
-  conn.on("close", () => {
-    const p = players.get(conn.peer);
-    if (p) { p.conn = null; renderCrew(); renderBoard(); toast(p.name + " lost signal"); }
+function connectBroker(i) {
+  if (i >= BROKERS.length) { $("joinUrl").textContent = "Couldn't reach a signal server — check the laptop's internet and refresh."; return; }
+  const c = mqtt.connect(BROKERS[i], {
+    clientId: "nwqh_" + code + "_" + Math.random().toString(36).slice(2, 8),
+    keepalive: 20, clean: true, connectTimeout: 6000, reconnectPeriod: 2000
   });
-});
+  let opened = false;
+  const giveUp = setTimeout(() => { if (!opened) { c.end(true); connectBroker(i + 1); } }, 7000);
+  c.on("connect", () => {
+    if (opened) return;           // reconnects re-subscribe automatically
+    opened = true; clearTimeout(giveUp); client = c;
+    c.subscribe(BASE + "/h");
+    const url = new URL("play.html", location.href);
+    url.search = "?g=" + code + "&b=" + i;
+    $("joinUrl").textContent = url.toString();
+    $("qr").innerHTML = "";
+    new QRCode($("qr"), { text: url.toString(), width: 240, height: 240, colorDark: "#060D18", colorLight: "#EDE6D6" });
+  });
+  c.on("message", (topic, payload) => {
+    try { const m = JSON.parse(payload.toString()); if (m && m.from) handleMsg(String(m.from), m); } catch (e) {}
+  });
+  c.on("error", () => { if (!opened) { clearTimeout(giveUp); c.end(true); connectBroker(i + 1); } });
+}
+connectBroker(0);
 
-function send(p, m) { try { if (p.conn && p.conn.open) p.conn.send(m); } catch (e) {} }
+function send(p, m) { try { if (client && p) client.publish(BASE + "/p/" + p.pid, JSON.stringify(m)); } catch (e) {} }
 function broadcast(m, exceptId) { for (const [id, p] of players) if (id !== exceptId) send(p, m); }
-function activeIds() { return [...players.keys()].filter(id => players.get(id).conn); }
+function activeIds() { return [...players.keys()].filter(id => players.get(id).online); }
 
 /* ============ messages from phones ============ */
-function handleMsg(conn, m) {
+function handleMsg(pid, m) {
+  if (m.t === "bye") {
+    const p = players.get(pid);
+    if (p && p.online) { p.online = false; renderCrew(); renderBoard(); toast(p.name + " lost signal"); }
+    return;
+  }
+
   if (m.t === "join") {
-    /* reconnect by name keeps the score */
+    /* rejoin by name keeps the score */
     let existing = null;
     for (const [id, p] of players) if (p.name.toLowerCase() === String(m.name).toLowerCase()) existing = [id, p];
     const taken = new Set([...players.values()].filter(p => !existing || p !== existing[1]).map(p => p.sound));
-    let sound = m.sound;
-    if (taken.has(sound)) sound = Object.keys(HORNS).find(k => !taken.has(k)) || m.sound;
+    let sound = HORNS[m.sound] ? m.sound : "fog";
+    if (taken.has(sound)) sound = Object.keys(HORNS).find(k => !taken.has(k)) || sound;
 
     let rec;
-    if (existing) { rec = existing[1]; players.delete(existing[0]); rec.conn = conn; rec.sound = sound; }
-    else rec = { conn, name: String(m.name).slice(0, 14), sound, score: 0, locked: false };
-    players.set(conn.peer, rec);
+    if (existing) {
+      rec = existing[1]; players.delete(existing[0]);
+      rec.pid = pid; rec.online = true; rec.sound = sound;
+      if (winnerId === existing[0]) winnerId = pid;
+    } else {
+      rec = { pid, online: true, name: String(m.name).slice(0, 14), sound, score: 0, locked: false };
+    }
+    players.set(pid, rec);
 
     send(rec, { t: "hello", name: rec.name, sound, score: rec.score, horn: HORNS[sound].label });
     if (phase === "LOBBY") send(rec, { t: "phase", p: "lobby" });
     else if (phase === "ARMED") send(rec, { t: "arm", locked: rec.locked });
     else send(rec, { t: "wait" });
     renderCrew(); renderBoard();
-    toast(rec.name + " came aboard as the " + HORNS[sound].label);
+    if (!existing) toast(rec.name + " came aboard as the " + HORNS[sound].label);
   }
 
   if (m.t === "buzz" && phase === "ARMED") {
-    const p = players.get(conn.peer);
+    const p = players.get(pid);
     if (!p || p.locked) return;
-    phase = "BUZZED"; winnerId = conn.peer;
+    phase = "BUZZED"; winnerId = pid;
     playHorn(p.sound);
     send(p, { t: "won", opts: cur.opts, secs: 20 });
-    broadcast({ t: "lost", name: p.name }, conn.peer);
+    broadcast({ t: "lost", name: p.name }, pid);
     setLamp("buzzed"); $("statusTxt").innerHTML = "&#9888;&#65039; <b>" + esc(p.name) + "</b> buzzed in — answering on their phone…";
     startCountdown(20, () => judge(winnerId, -1));
   }
 
-  if (m.t === "ans" && phase === "BUZZED" && conn.peer === winnerId) {
-    judge(conn.peer, m.i);
+  if (m.t === "ans" && phase === "BUZZED" && pid === winnerId) {
+    judge(pid, m.i);
   }
 }
 
@@ -420,15 +441,15 @@ function renderCrew() {
   const live = [...players.values()];
   $("crewCount").textContent = live.length + (live.length === 1 ? " crew" : " crew");
   $("crewRow").innerHTML = live.map(p =>
-    '<div class="crewchip"><span class="ic">' + HORNS[p.sound].icon + "</span>" + esc(p.name) + (p.conn ? "" : ' <span class="mono" style="color:var(--port)">offline</span>') + "</div>").join("");
-  $("startBtn").disabled = live.filter(p => p.conn).length === 0;
+    '<div class="crewchip"><span class="ic">' + HORNS[p.sound].icon + "</span>" + esc(p.name) + (p.online ? "" : ' <span class="mono" style="color:var(--port)">offline</span>') + "</div>").join("");
+  $("startBtn").disabled = live.filter(p => p.online).length === 0;
 }
 function renderBoard() {
   const ranked = [...players.values()].sort((a, b) => b.score - a.score);
   $("lboard").innerHTML = ranked.map((p, k) =>
     '<div class="lrow' + (k === 0 && ranked.length > 1 ? " lead" : "") + '">' +
     '<span class="pos">' + (k + 1) + "</span><span class=\"ic\">" + HORNS[p.sound].icon + "</span>" +
-    '<span class="nm">' + esc(p.name) + (p.locked && phase === "ARMED" ? ' <span class="lockedtag">LOCKED</span>' : "") + (p.conn ? "" : ' <span class="lockedtag">OFFLINE</span>') + "</span>" +
+    '<span class="nm">' + esc(p.name) + (p.locked && phase === "ARMED" ? ' <span class="lockedtag">LOCKED</span>' : "") + (p.online ? "" : ' <span class="lockedtag">OFFLINE</span>') + "</span>" +
     (p.delta ? '<span class="delta ' + (p.delta[0] === "+" ? "up" : "dn") + '">' + p.delta + "</span>" : "") +
     '<span class="sc">' + p.score + "</span></div>").join("");
   for (const p of players.values()) p.delta = null;
