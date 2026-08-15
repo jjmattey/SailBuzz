@@ -82,6 +82,21 @@
   .ans:active{border-color:var(--mark)}
   #ansTimer{font-family:"IBM Plex Mono"; font-size:20px; color:var(--mark)}
 
+  /* all-play shape grid */
+  .kgrid{display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; max-width:380px}
+  .kbtn{
+    border:none; border-radius:16px; padding:18px 10px; cursor:pointer; color:#fff;
+    display:flex; flex-direction:column; gap:8px; align-items:center; justify-content:center;
+    font-family:"Archivo"; font-weight:700; min-height:110px;
+    box-shadow:inset 0 -5px 0 rgba(0,0,0,.28);
+  }
+  .kbtn .shp{font-size:34px; line-height:1}
+  .kbtn .txt{font-size:13px; line-height:1.25; font-weight:600}
+  .kbtn:active{transform:translateY(3px); box-shadow:inset 0 -2px 0 rgba(0,0,0,.28)}
+  .kbtn.pick{outline:3px solid #fff}
+  .kbtn:disabled{opacity:.35}
+  .streak{font-family:"IBM Plex Mono"; font-size:15px; color:var(--mark)}
+
   .big{font-size:56px}
   .resD{font-family:"IBM Plex Mono"; font-size:26px}
   .resD.up{color:var(--stbd)} .resD.dn{color:var(--port)}
@@ -132,11 +147,20 @@
   <div class="ansbtns" id="ansBtns"></div>
 </section>
 
+<!-- ALL-PLAY -->
+<section id="sK">
+  <h2 id="kTitle">Lock in your answer</h2>
+  <div id="kTimer" class="mono" style="font-size:20px;color:var(--mark)"></div>
+  <div class="kgrid" id="kGrid"></div>
+  <p class="sub" id="kState"></p>
+</section>
+
 <!-- RESULT -->
 <section id="sRes">
   <div class="big" id="resIcon"></div>
   <h2 id="resTitle"></h2>
   <div class="resD" id="resDelta"></div>
+  <div class="streak" id="resStreak"></div>
   <p class="sub" id="resMsg"></p>
 </section>
 
@@ -242,6 +266,38 @@ function onMsg(m) {
     if (!m.locked) vibrate(60);
   }
 
+  if (m.t === "q") {   /* all-play: everyone answers */
+    vibrate(60); unlockAudio();
+    const SH = [
+      { g: "▲", c: "#E5484D" }, { g: "◆", c: "#1E6FD9" },
+      { g: "●", c: "#E8930C" }, { g: "■", c: "#2EBB6E" }
+    ];
+    $("kTitle").textContent = "Q" + m.qnum + " · Lock in your answer";
+    $("kState").textContent = "Faster answers score more — streaks pay bonus.";
+    $("kGrid").innerHTML = "";
+    let picked = false;
+    m.opts.forEach((o, i) => {
+      const b = document.createElement("button");
+      b.className = "kbtn"; b.style.background = SH[i].c;
+      b.innerHTML = '<span class="shp">' + SH[i].g + '</span><span class="txt">' + o.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) + "</span>";
+      b.onclick = () => {
+        if (picked) return; picked = true;
+        sendHost({ t: "ans", i });
+        playHorn(mySound); vibrate(70);
+        document.querySelectorAll(".kbtn").forEach((x, k) => { x.disabled = true; if (k === i) x.classList.add("pick"); });
+        $("kState").textContent = "Locked in — waiting for the rest of the crew…";
+      };
+      $("kGrid").appendChild(b);
+    });
+    let s = m.secs; $("kTimer").textContent = s + "s";
+    const iv = setInterval(() => {
+      s--;
+      if (s <= 0 || !$("sK").classList.contains("active")) { clearInterval(iv); $("kTimer").textContent = ""; }
+      else $("kTimer").textContent = s + "s";
+    }, 1000);
+    show("sK");
+  }
+
   if (m.t === "won") {
     vibrate([80, 40, 80]);
     playHorn(mySound);
@@ -275,11 +331,16 @@ function onMsg(m) {
     document.body.classList.remove("flash-good", "flash-bad");
     void document.body.offsetWidth;
     document.body.classList.add(m.ok ? "flash-good" : "flash-bad");
-    $("resIcon").textContent = m.ok ? "⚓" : "🌊";
-    $("resTitle").textContent = m.ok ? "Correct — well helmed!" : "Wrong — into the drink!";
-    $("resDelta").textContent = (m.delta > 0 ? "+" : "") + m.delta + " pts";
+    $("resIcon").textContent = m.ok ? "⚓" : (m.noans ? "⏱️" : "🌊");
+    $("resTitle").textContent = m.ok ? "Correct — well helmed!" : (m.noans ? "Too slow — no answer in" : "Wrong — into the drink!");
+    $("resDelta").textContent = m.delta ? ((m.delta > 0 ? "+" : "") + m.delta + " pts") : "+0 pts";
     $("resDelta").className = "resD " + (m.ok ? "up" : "dn");
-    $("resMsg").textContent = m.ok ? "Eyes on the big screen for the next question." : "You're locked out of this one — the rest of the crew can steal it.";
+    $("resStreak").textContent = m.ok && m.streak >= 2 ? "🔥 " + m.streak + " in a row — streak bonus paid" : "";
+    $("resMsg").textContent = m.ok
+      ? "Eyes on the big screen for the next question."
+      : (m.correctText !== undefined
+          ? "It was: " + m.correctText
+          : "You're locked out of this one — the rest of the crew can steal it.");
     if (m.ok) playHorn("bell"); vibrate(m.ok ? 120 : [60, 60, 60]);
     show("sRes");
   }
