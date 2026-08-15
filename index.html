@@ -196,6 +196,7 @@
     <div class="qrwrap"><div id="qr"></div></div>
     <div class="joinurl mono" id="joinUrl">starting signal server…</div>
     <div class="crewrow" id="crewRow"></div>
+    <div class="moderow" id="packRow"></div>
     <div class="moderow">
       <button class="modebtn sel" id="modeAll"><b>&#127912; All-play</b><span>Everyone answers on their phone — faster correct answers score more, streaks pay bonus</span></button>
       <button class="modebtn" id="modeBuzz"><b>&#128680; Buzzer race</b><span>First horn in answers alone — wrong costs points and the rest can steal</span></button>
@@ -358,8 +359,17 @@ function handleMsg(pid, m) {
 
 /* ============ game flow ============ */
 let mode = "all";                 // "all" (Kahoot-style) | "buzz" (buzzer race)
+let packKey = "sail";
+let bank = PACKS.sail.questions, LEVELS = PACKS.sail.levels;
 const QT = 20;                    // seconds per all-play question
-const ALLPTS = { CC: 100, DS: 150, CS: 200 };
+
+$("packRow").innerHTML = Object.entries(PACKS).map(([k, p]) =>
+  '<button class="modebtn packbtn' + (k === packKey ? " sel" : "") + '" data-pack="' + k + '"><b>' + p.icon + " " + esc(p.name) + "</b><span>" + p.questions.length + " questions · three difficulty tiers</span></button>").join("");
+document.querySelectorAll(".packbtn").forEach(b => b.onclick = () => {
+  packKey = b.dataset.pack;
+  bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels;
+  document.querySelectorAll(".packbtn").forEach(x => x.classList.toggle("sel", x === b));
+});
 const SHAPES = [
   { g: "&#9650;", c: "#E5484D" },   // triangle red
   { g: "&#9670;", c: "#1E6FD9" },   // diamond blue
@@ -371,7 +381,7 @@ let answers = new Map(), qStart = 0;
 $("modeAll").onclick  = () => { mode = "all";  $("modeAll").classList.add("sel"); $("modeBuzz").classList.remove("sel"); };
 $("modeBuzz").onclick = () => { mode = "buzz"; $("modeBuzz").classList.add("sel"); $("modeAll").classList.remove("sel"); };
 
-$("startBtn").onclick = () => { unlockAudio(); order = shuffle(QUESTIONS.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; } nextQuestion(); };
+$("startBtn").onclick = () => { unlockAudio(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = shuffle(bank.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; } nextQuestion(); };
 $("nextBtn").onclick = () => nextQuestion();
 $("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); else if (phase === "ANSWERING") finishAllplay(); };
 $("endBtn").onclick = () => endQuiz();
@@ -381,7 +391,7 @@ function nextQuestion() {
   stopCountdown();
   qi++;
   if (qi >= order.length) return endQuiz();
-  const src = QUESTIONS[order[qi]];
+  const src = bank[order[qi]];
   /* shuffle options, track the right one */
   const idx = shuffle(src.opts.map((_, i) => i));
   cur = { lvl: src.lvl, q: src.q, gfx: src.gfx || null, opts: idx.map(i => src.opts[i]), a: idx.indexOf(src.a) };
@@ -397,7 +407,7 @@ function nextQuestion() {
   const b = $("qBadge"); b.textContent = L.label; b.style.color = L.color;
   $("qNum").textContent = "Q " + (qi + 1) + " / " + order.length;
   $("qStake").innerHTML = mode === "all"
-    ? '<span class="up">up to +' + ALLPTS[cur.lvl] + "</span> · faster = more"
+    ? '<span class="up">up to +' + LEVELS[cur.lvl].base + "</span> · faster = more"
     : '<span class="up">+' + L.pts + "</span> · <span class=\"dn\">&minus;" + L.pen + "</span>";
   $("qText").textContent = cur.q;
   const gbox = $("qGfx");
@@ -424,7 +434,7 @@ function nextQuestion() {
 function finishAllplay() {
   if (phase !== "ANSWERING") return;
   phase = "REVEAL"; stopCountdown(); setLamp("idle");
-  const base = ALLPTS[cur.lvl];
+  const base = LEVELS[cur.lvl].base;
   const counts = [0, 0, 0, 0];
   let fastest = null;
 
