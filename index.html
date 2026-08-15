@@ -177,6 +177,13 @@
   }
   .toast.show{opacity:1}
   @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important} }
+  .sharebtn{
+    font-family:"IBM Plex Mono"; font-weight:600; font-size:15px; color:var(--paper);
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:10px 16px; cursor:pointer;
+  }
+  .sharebtn:hover{border-color:var(--mark)}
+  .sharebtn:disabled{opacity:.4; cursor:default}
 </style>
 </head>
 <body>
@@ -195,7 +202,11 @@
     <h2>Scan to board · <em id="crewCount">0 crew</em> aboard</h2>
     <div class="qrwrap"><div id="qr"></div></div>
     <div class="joinurl mono" id="joinUrl">starting signal server…</div>
-    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 7 · all engines aboard (no external CDNs)</div>
+    <div id="shareRow" style="display:flex;gap:10px;justify-content:center;margin-top:10px">
+      <button class="sharebtn" id="copyBtn" disabled>&#128203; Copy join link</button>
+      <button class="sharebtn" id="shareBtn" style="display:none" disabled>&#128228; Send link&#8230;</button>
+    </div>
+    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 8 · share link + 50:50 lifelines</div>
     <div class="crewrow" id="crewRow"></div>
     <div class="moderow" id="packRow"></div>
     <div class="moderow">
@@ -287,7 +298,10 @@ function connectBroker(i) {
     c.subscribe(BASE + "/h");
     const url = new URL("play.html", location.href);
     url.search = "?g=" + code + "&b=" + i;
-    $("joinUrl").textContent = url.toString();
+    joinLink = url.toString();
+    $("joinUrl").textContent = joinLink;
+    $("copyBtn").disabled = false;
+    if (navigator.share) { $("shareBtn").style.display = ""; $("shareBtn").disabled = false; }
     $("qr").innerHTML = "";
     try {
       const q = qrcode(0, "M"); q.addData(url.toString()); q.make();
@@ -331,7 +345,7 @@ function handleMsg(pid, m) {
       rec.pid = pid; rec.online = true; rec.sound = sound;
       if (winnerId === existing[0]) winnerId = pid;
     } else {
-      rec = { pid, online: true, name: String(m.name).slice(0, 14), sound, score: 0, locked: false, streak: 0 };
+      rec = { pid, online: true, name: String(m.name).slice(0, 14), sound, score: 0, locked: false, streak: 0, fifty: false };
     }
     players.set(pid, rec);
 
@@ -358,6 +372,18 @@ function handleMsg(pid, m) {
     judge(pid, m.i);
   }
 
+  if (m.t === "fifty") {
+    const p = players.get(pid); if (!p) return;
+    const eligible = (phase === "ANSWERING" && !answers.has(pid)) || (phase === "BUZZED" && pid === winnerId);
+    if (!eligible) return;
+    if (p.fifty) { send(p, { t: "fifty", used: true }); return; }
+    p.fifty = true;
+    const wrong = [0, 1, 2, 3].filter(x => x !== cur.a);
+    for (let k = wrong.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [wrong[k], wrong[j]] = [wrong[j], wrong[k]]; }
+    send(p, { t: "fifty", drop: wrong.slice(0, 2) });
+    toast("\u2702\uFE0F " + p.name + " played their 50:50");
+  }
+
   if (m.t === "ans" && phase === "ANSWERING") {
     const p = players.get(pid);
     if (!p || !p.online || answers.has(pid)) return;
@@ -366,6 +392,24 @@ function handleMsg(pid, m) {
     if (answers.size >= activeIds().length) finishAllplay();
   }
 }
+
+/* ============ share the join link ============ */
+let joinLink = "";
+$("copyBtn").onclick = async () => {
+  if (!joinLink) return;
+  let ok = false;
+  try { await navigator.clipboard.writeText(joinLink); ok = true; } catch (e) {
+    try {
+      const ta = document.createElement("textarea"); ta.value = joinLink;
+      document.body.appendChild(ta); ta.select(); ok = document.execCommand("copy"); ta.remove();
+    } catch (e2) {}
+  }
+  $("copyBtn").innerHTML = ok ? "&#9989; Copied — paste it to the crew" : "Couldn't copy — select the link above";
+  setTimeout(() => { $("copyBtn").innerHTML = "&#128203; Copy join link"; }, 2500);
+};
+$("shareBtn").onclick = () => {
+  if (joinLink && navigator.share) navigator.share({ title: "Join the quiz!", text: "Join our quiz — tap to board:", url: joinLink }).catch(() => {});
+};
 
 /* ============ game flow ============ */
 let mode = "all";                 // "all" (Kahoot-style) | "buzz" (buzzer race)
@@ -391,7 +435,7 @@ let answers = new Map(), qStart = 0;
 $("modeAll").onclick  = () => { mode = "all";  $("modeAll").classList.add("sel"); $("modeBuzz").classList.remove("sel"); };
 $("modeBuzz").onclick = () => { mode = "buzz"; $("modeBuzz").classList.add("sel"); $("modeAll").classList.remove("sel"); };
 
-$("startBtn").onclick = () => { unlockAudio(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = shuffle(bank.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; } nextQuestion(); };
+$("startBtn").onclick = () => { unlockAudio(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = shuffle(bank.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; p.fifty = false; } nextQuestion(); };
 $("nextBtn").onclick = () => nextQuestion();
 $("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); else if (phase === "ANSWERING") finishAllplay(); };
 $("endBtn").onclick = () => endQuiz();
