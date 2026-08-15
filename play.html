@@ -147,13 +147,48 @@
   <p class="sub" id="endMsg"></p>
 </section>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="audio.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
-const code = (new URLSearchParams(location.search).get("g") || "").toUpperCase();
-let conn = null, mySound = "fog", myName = "", myScore = 0, armed = false;
+const qs = new URLSearchParams(location.search);
+const code = (qs.get("g") || "").toUpperCase();
+const brokerIdx = parseInt(qs.get("b") || "0", 10) || 0;
+const BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
+const pid = "p_" + Math.random().toString(36).slice(2, 10);
+let client = null, joined = false, helloTimer = null;
+let mySound = "fog", myName = "", myScore = 0, armed = false;
+
+function sendHost(m) {
+  try { if (client) client.publish("nightwatch1/" + code + "/h", JSON.stringify(Object.assign({ from: pid }, m))); } catch (e) {}
+}
+
+function connect() {
+  const url = BROKERS[brokerIdx] || BROKERS[0];
+  client = mqtt.connect(url, {
+    clientId: "nwqp_" + pid,
+    keepalive: 15, clean: true, connectTimeout: 8000, reconnectPeriod: 2000,
+    will: { topic: "nightwatch1/" + code + "/h", payload: JSON.stringify({ from: pid, t: "bye" }), qos: 0, retain: false }
+  });
+  client.on("connect", () => {
+    client.subscribe("nightwatch1/" + code + "/p/" + pid);
+    sendHost({ t: "join", name: myName, sound: mySound });   // also re-announces after any reconnect
+    if (!joined) {
+      clearTimeout(helloTimer);
+      helloTimer = setTimeout(() => {
+        if (!joined) { $("joinBtn").disabled = false; $("joinErr").textContent = "No reply from the big screen — is it still open? Rescan the QR and try again."; }
+      }, 6000);
+    }
+  });
+  client.on("message", (t, payload) => { try { onMsg(JSON.parse(payload.toString())); } catch (e) {} });
+  client.on("error", () => {
+    if (!joined) { $("joinBtn").disabled = false; $("joinErr").textContent = "Can't reach the signal server — check your phone's internet."; }
+  });
+  client.on("offline", () => {
+    if (joined) { $("waitTitle").textContent = "Signal lost"; $("waitMsg").textContent = "Reconnecting… hold tight, your score is kept."; show("sWait"); }
+  });
+}
 
 function show(id) { document.querySelectorAll("section").forEach(s => s.classList.remove("active")); $(id).classList.add("active"); }
 function setScore(s) { myScore = s; $("myScore").textContent = "PTS " + s; }
@@ -185,27 +220,14 @@ $("joinBtn").onclick = () => {
   connect();
 };
 
-function connect() {
-  const peer = new Peer({ debug: 1 });
-  peer.on("open", () => {
-    conn = peer.connect("nwq-" + code, { reliable: true });
-    conn.on("open", () => conn.send({ t: "join", name: myName, sound: mySound }));
-    conn.on("data", onMsg);
-    conn.on("close", () => { $("waitTitle").textContent = "Signal lost"; $("waitMsg").textContent = "The big screen closed or the link dropped. Rescan the QR to rejoin — your score is kept."; show("sWait"); });
-  });
-  peer.on("error", (e) => {
-    $("joinBtn").disabled = false;
-    $("joinErr").textContent = e.type === "peer-unavailable" ? "Can't find that quiz — is the big screen open? Check the code." : "Connection error: " + e.type;
-    show("sJoin");
-  });
-}
-
 function onMsg(m) {
   if (m.t === "hello") {
+    const firstHello = !joined;
+    joined = true; clearTimeout(helloTimer);
     mySound = m.sound; setScore(m.score);
     $("whoami").textContent = HORNS[mySound].icon + " " + myName.toUpperCase();
     $("hornNote").textContent = "YOUR HORN: " + m.horn.toUpperCase();
-    playHorn(mySound);
+    if (firstHello) playHorn(mySound);
   }
   if (m.t === "phase" && m.p === "lobby") { $("waitTitle").textContent = "Aboard!"; $("waitMsg").textContent = "Waiting for the skipper to start… keep this screen open."; show("sWait"); }
   if (m.t === "wait") { $("waitTitle").textContent = "Hold fast"; $("waitMsg").textContent = "A question is in play — you'll get the next one."; show("sWait"); }
@@ -228,7 +250,7 @@ function onMsg(m) {
       const b = document.createElement("button");
       b.className = "ans";
       b.innerHTML = '<span class="key">' + "ABCD"[i] + "</span><span>" + o.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) + "</span>";
-      b.onclick = () => { conn.send({ t: "ans", i }); $("ansTimer").textContent = ""; };
+      b.onclick = () => { sendHost({ t: "ans", i }); $("ansTimer").textContent = ""; };
       $("ansBtns").appendChild(b);
     });
     let s = m.secs; $("ansTimer").textContent = s + "s";
@@ -288,7 +310,7 @@ $("buzzBtn").addEventListener("pointerdown", () => {
   if (!armed || $("buzzBtn").disabled) return;
   armed = false;
   unlockAudio(); playHorn(mySound); vibrate(90);
-  conn.send({ t: "buzz" });
+  sendHost({ t: "buzz" });
   $("buzzState").innerHTML = "&#128226; Horn sounded — waiting on the skipper's screen…";
 });
 </script>
