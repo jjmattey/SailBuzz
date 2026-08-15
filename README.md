@@ -5,10 +5,15 @@ A buzzer-style sailing quiz for the whole crew — 38 mixed questions across
 with night-navigation light scenarios, IALA buoyage, boat parts and more drawn as graphics.
 
 The **laptop** shows the questions, graphics and leaderboard.
-Each **phone** scans the QR code, picks a nautical horn (fog horn, ship's bell,
-bosun's whistle or air horn), and gets a big red buzzer. First horn in gets the
-answer buttons on their phone. A wrong answer locks that player out and re-arms
-everyone else's buzzers.
+Each **phone** scans the QR code and picks a nautical horn (fog horn, ship's
+bell, bosun's whistle or air horn). Two game modes, chosen in the lobby:
+
+- **All-play (Kahoot-style, default)** — every question, everyone answers on
+  their phone using four coloured shape buttons. Faster correct answers score
+  more (up to 100/150/200 by level), correct streaks pay a bonus, and the big
+  screen shows the vote split when time's up. Wrong answers score 0.
+- **Buzzer race** — first horn in gets the answer buttons alone. Correct earns
+  +10/+15/+20, wrong costs −5/−7/−10, locks you out and re-arms everyone else.
 
 No server, no accounts, no build step — phones and laptop connect directly to
 each other (peer-to-peer via PeerJS). They just all need an internet connection;
@@ -38,8 +43,8 @@ That URL is your quiz. Bookmark it on the laptop.
 2. Everyone scans the QR with their phone camera, types a name, taps a horn
    (tap it twice to preview the sound), and joins.
 3. Hit **Cast off** on the laptop. Questions come up in a random order each game.
-4. Buzz → your horn sounds through your phone *and* the laptop → answer A–D on
-   your phone within 20 seconds.
+4. All-play: four coloured shapes appear on every phone — tap fast. Buzzer
+   race: buzz first, then answer on your phone within 20 seconds.
 5. Skipper controls on the laptop: **Reveal answer** (nobody's getting it),
    **Next question**, **End quiz** (shows the podium early).
 
