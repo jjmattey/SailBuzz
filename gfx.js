@@ -31,6 +31,36 @@ function seaScene(inner, horizonY = 210) {
   </svg>`;
 }
 
+const DAY_DEFS = `
+<defs>
+  <linearGradient id="dsky" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#7FB2DE"/><stop offset="1" stop-color="#CBE6F6"/>
+  </linearGradient>
+  <linearGradient id="dsea" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#2E6E9E"/><stop offset="1" stop-color="#1C4A73"/>
+  </linearGradient>
+  <filter id="softglow" x="-100%" y="-100%" width="300%" height="300%">
+    <feGaussianBlur stdDeviation="3" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>`;
+
+function dayScene(inner, horizonY = 210) {
+  const cloud = (x, y, s) => `<g fill="#FFFFFF" opacity="0.85" transform="translate(${x},${y}) scale(${s})">
+    <ellipse cx="0" cy="0" rx="34" ry="13"/><ellipse cx="24" cy="-7" rx="24" ry="11"/><ellipse cx="-22" cy="-5" rx="20" ry="10"/></g>`;
+  return `<svg viewBox="0 0 800 340" class="gfx-svg" role="img">
+    ${DAY_DEFS}
+    <rect width="800" height="${horizonY}" fill="url(#dsky)"/>
+    <rect y="${horizonY}" width="800" height="${340 - horizonY}" fill="url(#dsea)"/>
+    <line x1="0" y1="${horizonY}" x2="800" y2="${horizonY}" stroke="#1B3E5E" stroke-width="1.5"/>
+    <circle cx="700" cy="54" r="24" fill="#FFE9A8" stroke="#F5C452" stroke-width="3"/>
+    ${cloud(150, 60, 1)}${cloud(420, 42, 0.8)}${cloud(600, 96, 0.6)}
+    <path d="M 60 ${horizonY + 26} q 22 -8 44 0 t 44 0 t 44 0" stroke="#4C87B5" fill="none" stroke-width="2" opacity="0.7"/>
+    <path d="M 540 ${horizonY + 44} q 22 -8 44 0 t 44 0" stroke="#4C87B5" fill="none" stroke-width="2" opacity="0.7"/>
+    ${inner}
+  </svg>`;
+}
+
 function stars() {
   let s = "";
   const pts = [[60,40],[130,90],[220,30],[310,70],[420,45],[500,95],[560,25],[640,110],[760,80],[90,140],[360,120],[470,150]];
@@ -91,19 +121,19 @@ function gfxBuoy(g) {
       body = `<path d="M ${cx-36} ${waterY} L ${cx+36} ${waterY} L ${cx} ${waterY-96} Z" fill="${G}" stroke="#2A3B52"/><rect x="${cx-44}" y="${waterY-8}" width="88" height="12" rx="4" fill="#111820" stroke="#2A3B52"/>`;
       cap = "CONICAL BUOY · IALA REGION A"; break;
   }
-  const ripples = `<path d="M ${cx-70} ${waterY+14} q 18 -7 36 0 t 36 0 t 36 0 t 36 0" stroke="#16283E" fill="none" stroke-width="2"/>`;
-  return seaScene(`${body}${topmark}${ripples}<text x="24" y="322" class="gfx-cap">${cap}</text>`, waterY);
+  const ripples = `<path d="M ${cx-70} ${waterY+14} q 18 -7 36 0 t 36 0 t 36 0 t 36 0" stroke="#17405F" fill="none" stroke-width="2"/>`;
+  return dayScene(`${body}${topmark}${ripples}<text x="24" y="322" class="gfx-cap day">${cap}</text>`, waterY);
 }
 
 /* Sailboat side profile with one highlighted part */
 function gfxBoat(g) {
-  const hi = "#FFC845";
-  const dim = "#3B5573", sail = "#182C44", hull = "#22364F";
+  const hi = "#FF6B1A";
+  const dim = "#54718D", sail = "#F5F1E4", hull = "#24425F";
   const H = (name) => (g.part === name ? `stroke="${hi}" stroke-width="6" filter="url(#softglow)"` : `stroke="${dim}" stroke-width="3"`);
   const inner = `
     <!-- sails (behind everything) -->
-    <path d="M 406 70 L 406 164 L 528 170 Z" fill="${sail}" stroke="#24405F" opacity="0.95"/>
-    <path d="M 394 84 L 394 218 L 244 226 Z" fill="${sail}" stroke="#24405F" opacity="0.8"/>
+    <path d="M 406 70 L 406 164 L 528 170 Z" fill="${sail}" stroke="#9DB4C8" opacity="0.97"/>
+    <path d="M 394 84 L 394 218 L 244 226 Z" fill="${sail}" stroke="#9DB4C8" opacity="0.9"/>
     <!-- hull -->
     <path d="M 172 236 Q 400 250 622 236 L 586 276 Q 400 290 216 276 Z" fill="${hull}" stroke="#2A3B52" stroke-width="2"/>
     <!-- keel -->
@@ -124,8 +154,8 @@ function gfxBoat(g) {
     <line x1="588" y1="244" x2="528" y2="230" ${H("tiller")} stroke-linecap="round"/>
     <!-- burgee -->
     <path d="M 400 56 L 400 42 L 428 49 Z" fill="#FF4757"/>
-    <text x="24" y="322" class="gfx-cap">SLOOP · SIDE PROFILE · PART HIGHLIGHTED IN YELLOW</text>`;
-  return seaScene(inner, 276);
+    <text x="24" y="322" class="gfx-cap day">SLOOP · SIDE PROFILE · PART HIGHLIGHTED IN ORANGE</text>`;
+  return dayScene(inner, 276);
 }
 
 /* Points of sail rose with the no-go zone shaded */
@@ -134,27 +164,52 @@ function gfxSailRose() {
   const rad = (d) => [(cx + r * Math.sin(d * Math.PI / 180)), (cy - r * Math.cos(d * Math.PI / 180))];
   const [x1, y1] = rad(-45), [x2, y2] = rad(45);
   const inner = `
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#0D1B2E" stroke="#2A3B52" stroke-width="2"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#EAF4FB" stroke="#7FA6C4" stroke-width="2"/>
     <path d="M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z" fill="#FF4757" opacity="0.28" stroke="#FF4757" stroke-dasharray="6 5"/>
-    <g filter="url(#softglow)">
-      <line x1="${cx}" y1="18" x2="${cx}" y2="58" stroke="#EDE6D6" stroke-width="4"/>
-      <path d="M ${cx} 66 L ${cx-9} 46 L ${cx+9} 46 Z" fill="#EDE6D6"/>
+    <g>
+      <line x1="${cx}" y1="18" x2="${cx}" y2="58" stroke="#1B3E5E" stroke-width="4"/>
+      <path d="M ${cx} 66 L ${cx-9} 46 L ${cx+9} 46 Z" fill="#1B3E5E"/>
     </g>
-    <text x="${cx}" y="12" text-anchor="middle" class="gfx-cap">TRUE WIND</text>
-    <path d="M ${cx-9} ${cy+34} Q ${cx} ${cy-42} ${cx+9} ${cy+34} L ${cx} ${cy+44} Z" fill="#2A3B52" stroke="#3B5573"/>
-    <text x="${cx}" y="${cy + r + 30}" text-anchor="middle" class="gfx-cap">SHADED SECTOR ≈ 45° EITHER SIDE OF THE WIND</text>`;
-  return seaScene(inner, 330);
+    <text x="${cx}" y="12" text-anchor="middle" class="gfx-cap day">TRUE WIND</text>
+    <path d="M ${cx-9} ${cy+34} Q ${cx} ${cy-42} ${cx+9} ${cy+34} L ${cx} ${cy+44} Z" fill="#24425F" stroke="#54718D"/>
+    <text x="${cx}" y="${cy + r + 30}" text-anchor="middle" class="gfx-cap day">SHADED SECTOR ≈ 45° EITHER SIDE OF THE WIND</text>`;
+  return dayScene(inner, 330);
 }
 
 /* International code flag A */
 function gfxFlagA() {
   const inner = `
-    <line x1="290" y1="60" x2="290" y2="270" stroke="#3B5573" stroke-width="6" stroke-linecap="round"/>
+    <line x1="290" y1="60" x2="290" y2="270" stroke="#24425F" stroke-width="6" stroke-linecap="round"/>
     <path d="M 294 70 L 530 70 L 470 130 L 530 190 L 294 190 Z" fill="#0B4FA8" stroke="#2A3B52" stroke-width="2"/>
     <path d="M 294 70 L 412 70 L 412 190 L 294 190 Z" fill="#EDE6D6"/>
     <path d="M 294 70 L 530 70 L 470 130 L 530 190 L 294 190 Z" fill="none" stroke="#2A3B52" stroke-width="2"/>
-    <text x="24" y="322" class="gfx-cap">INTERNATIONAL CODE FLAG · FLOWN ALONE</text>`;
-  return seaScene(inner, 300);
+    <text x="24" y="322" class="gfx-cap day">INTERNATIONAL CODE FLAG · FLOWN ALONE</text>`;
+  return dayScene(inner, 300);
+}
+
+/* Day shapes hoisted on a vessel (COLREGs) */
+function gfxShapes(g) {
+  const B = "#14202C", cx = 400, hx = 330, waterY = 262;
+  const ball = (y, r = 15) => `<circle cx="${hx}" cy="${y}" r="${r}" fill="${B}"/>`;
+  const coneDown = (y) => `<path d="M ${hx-17} ${y-15} L ${hx+17} ${y-15} L ${hx} ${y+15} Z" fill="${B}"/>`;
+  const coneUp = (y) => `<path d="M ${hx-17} ${y+15} L ${hx+17} ${y+15} L ${hx} ${y-15} Z" fill="${B}"/>`;
+  const diamond = (y) => `<path d="M ${hx} ${y-18} L ${hx+15} ${y} L ${hx} ${y+18} L ${hx-15} ${y} Z" fill="${B}"/>`;
+  let shapes = "";
+  switch (g.style) {
+    case "ball":    shapes = ball(120); break;                          // anchored
+    case "cone":    shapes = coneDown(120); break;                      // sailing + engine
+    case "ball2":   shapes = ball(100) + ball(146); break;              // NUC
+    case "ball3":   shapes = ball(84) + ball(128) + ball(172); break;   // aground
+    case "bdb":     shapes = ball(84) + diamond(128) + ball(172); break;// RAM
+    case "diamond": shapes = diamond(120); break;                       // tow > 200m
+    case "cones2":  shapes = coneDown(104) + coneUp(146); break;        // fishing (apexes together)
+  }
+  const vessel = `
+    <line x1="${cx}" y1="${waterY - 24}" x2="${cx}" y2="52" stroke="#24425F" stroke-width="5" stroke-linecap="round"/>
+    <line x1="${cx}" y1="66" x2="${hx}" y2="66" stroke="#24425F" stroke-width="4" stroke-linecap="round"/>
+    <line x1="${hx}" y1="66" x2="${hx}" y2="${g.style === "bdb" || g.style === "ball3" ? 68 : 104}" stroke="#54718D" stroke-width="2" stroke-dasharray="4 4"/>
+    <path d="M ${cx - 170} ${waterY - 24} L ${cx + 170} ${waterY - 24} L ${cx + 132} ${waterY + 6} L ${cx - 136} ${waterY + 6} Z" fill="#24425F" stroke="#1B3E5E" stroke-width="2"/>`;
+  return dayScene(vessel + shapes + `<text x="24" y="322" class="gfx-cap day">DAY SHAPE(S) HOISTED WHERE BEST SEEN</text>`, waterY - 4);
 }
 
 function renderGfx(g) {
@@ -165,6 +220,7 @@ function renderGfx(g) {
     case "boat":     return gfxBoat(g);
     case "sailrose": return gfxSailRose();
     case "flagA":    return gfxFlagA();
+    case "shapes":   return gfxShapes(g);
     default: return "";
   }
 }
