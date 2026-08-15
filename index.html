@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Night Watch — Sailing Quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=Archivo:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sea:#060D18; --panel:#0D1826; --panel2:#0A1420; --line:#1E3049;
+    --paper:#EDE6D6; --dim:#8FA3BC; --port:#FF4757; --stbd:#2EE38A;
+    --mark:#FFC845; --glowW:#FFF4D6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 500px at 70% -10%, #0E2138 0%, transparent 60%),
+      var(--sea);
+    color:var(--paper);
+    font-family:"Archivo",system-ui,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column;
+  }
+  .mono{font-family:"IBM Plex Mono",monospace}
+  .disp{font-family:"Bricolage Grotesque","Archivo",sans-serif}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 26px; border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:baseline; gap:14px}
+  .brand h1{font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:.5px}
+  .brand h1 .n{color:var(--stbd)} .brand h1 .w{color:var(--port)}
+  .brand .sub{font-family:"IBM Plex Mono";font-size:11px;color:var(--dim);letter-spacing:.18em}
+  .codechip{
+    font-family:"IBM Plex Mono"; font-size:14px; color:var(--mark);
+    border:1px solid var(--line); border-radius:8px; padding:8px 14px;
+    background:var(--panel2); letter-spacing:.25em;
+  }
+  .codechip .lbl{color:var(--dim); letter-spacing:.1em; margin-right:8px}
+
+  main{flex:1; display:flex; min-height:0}
+
+  /* ---------- LOBBY ---------- */
+  #lobby{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; padding:30px; text-align:center}
+  #lobby h2{font-family:"Bricolage Grotesque"; font-weight:800; font-size:clamp(28px,4vw,44px)}
+  #lobby h2 em{font-style:normal; color:var(--mark)}
+  .qrwrap{
+    background:var(--paper); padding:18px; border-radius:14px;
+    box-shadow:0 0 0 1px var(--line), 0 0 60px rgba(255,200,69,.12);
+  }
+  #qr img, #qr canvas{display:block}
+  .joinurl{font-family:"IBM Plex Mono"; font-size:13px; color:var(--dim); word-break:break-all; max-width:640px}
+  .crewrow{display:flex; gap:12px; flex-wrap:wrap; justify-content:center; min-height:52px}
+  .crewchip{
+    display:flex; align-items:center; gap:10px; padding:10px 18px;
+    border:1px solid var(--line); border-radius:999px; background:var(--panel);
+    font-weight:600; animation:pop .3s ease;
+  }
+  .crewchip .ic{font-size:20px}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  .btn{
+    font-family:"Bricolage Grotesque"; font-weight:700; font-size:18px;
+    color:var(--sea); background:var(--mark); border:none; border-radius:12px;
+    padding:14px 34px; cursor:pointer; letter-spacing:.03em;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.35; cursor:not-allowed}
+  .btn.ghost{background:transparent; color:var(--dim); border:1px solid var(--line); font-size:15px}
+  .btn.ghost:hover{color:var(--paper)}
+  .hint{font-size:14px; color:var(--dim); max-width:560px}
+
+  /* ---------- GAME ---------- */
+  #game{flex:1; display:none; min-height:0}
+  #game.active{display:flex}
+  .qcol{flex:1; display:flex; flex-direction:column; padding:22px 30px; gap:14px; min-width:0}
+  .qtop{display:flex; align-items:center; gap:14px}
+  .badge{
+    font-family:"IBM Plex Mono"; font-size:12px; font-weight:600; letter-spacing:.16em;
+    padding:6px 12px; border-radius:6px; border:1px solid currentColor;
+  }
+  .qnum{font-family:"IBM Plex Mono"; font-size:13px; color:var(--dim)}
+  .stake{font-family:"IBM Plex Mono"; font-size:13px; margin-left:auto}
+  .stake .up{color:var(--stbd)} .stake .dn{color:var(--port)}
+  .qtext{font-family:"Bricolage Grotesque"; font-weight:700; font-size:clamp(22px,2.6vw,34px); line-height:1.2}
+  .gfxbox{border:1px solid var(--line); border-radius:14px; overflow:hidden; background:var(--panel2)}
+  .gfx-svg{display:block; width:100%; height:auto; max-height:44vh}
+  .gfx-cap{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:.2em; fill:#4E637E}
+  .opts{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .opt{
+    display:flex; gap:12px; align-items:center; padding:14px 16px;
+    border:1px solid var(--line); border-radius:12px; background:var(--panel);
+    font-size:18px; font-weight:600; transition:all .25s;
+  }
+  .opt .key{
+    font-family:"IBM Plex Mono"; color:var(--dim); border:1px solid var(--line);
+    border-radius:6px; width:30px; height:30px; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .opt.correct{border-color:var(--stbd); background:rgba(46,227,138,.12); box-shadow:0 0 24px rgba(46,227,138,.15)}
+  .opt.correct .key{color:var(--stbd); border-color:var(--stbd)}
+  .opt.wrongpick{border-color:var(--port); background:rgba(255,71,87,.10)}
+  .opt.wrongpick .key{color:var(--port); border-color:var(--port)}
+  .statusbar{
+    margin-top:auto; display:flex; align-items:center; gap:16px;
+    border:1px solid var(--line); border-radius:12px; padding:14px 18px; background:var(--panel2);
+    font-size:17px; min-height:62px;
+  }
+  .lamp{width:14px; height:14px; border-radius:50%; flex:none}
+  .lamp.armed{background:var(--stbd); box-shadow:0 0 14px var(--stbd); animation:pulse 1.1s infinite}
+  .lamp.buzzed{background:var(--mark); box-shadow:0 0 14px var(--mark)}
+  .lamp.idle{background:var(--dim)}
+  @keyframes pulse{50%{opacity:.35}}
+  .timer{font-family:"IBM Plex Mono"; font-size:22px; color:var(--mark); margin-left:auto; min-width:56px; text-align:right}
+  .ctrls{display:flex; gap:10px}
+
+  /* ---------- LEADERBOARD ---------- */
+  .lcol{
+    width:300px; flex:none; border-left:1px solid var(--line);
+    background:var(--panel2); display:flex; flex-direction:column; padding:20px;
+    gap:10px;
+  }
+  .lcol h3{font-family:"IBM Plex Mono"; font-size:12px; letter-spacing:.22em; color:var(--dim); margin-bottom:6px}
+  .lrow{
+    display:flex; align-items:center; gap:10px; padding:12px 12px;
+    border:1px solid var(--line); border-radius:10px; background:var(--panel);
+    transition:transform .3s;
+  }
+  .lrow .pos{font-family:"IBM Plex Mono"; color:var(--dim); width:20px}
+  .lrow .ic{font-size:18px}
+  .lrow .nm{font-weight:700; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .lrow .sc{font-family:"IBM Plex Mono"; font-size:17px}
+  .lrow.lead{border-color:var(--mark)}
+  .lrow.lead .sc{color:var(--mark)}
+  .lrow .delta{font-family:"IBM Plex Mono"; font-size:12px; animation:fadeup 1.6s forwards}
+  .delta.up{color:var(--stbd)} .delta.dn{color:var(--port)}
+  @keyframes fadeup{0%{opacity:0; transform:translateY(4px)} 15%{opacity:1; transform:none} 80%{opacity:1} 100%{opacity:0}}
+  .lockedtag{font-family:"IBM Plex Mono"; font-size:10px; color:var(--port)}
+
+  /* ---------- PODIUM ---------- */
+  #podium{flex:1; display:none; flex-direction:column; align-items:center; justify-content:center; gap:24px; padding:40px; text-align:center}
+  #podium.active{display:flex}
+  #podium h2{font-family:"Bricolage Grotesque"; font-weight:800; font-size:clamp(30px,5vw,52px)}
+  .podrow{display:flex; align-items:flex-end; gap:18px}
+  .podbox{display:flex; flex-direction:column; align-items:center; gap:10px}
+  .podbar{
+    width:150px; border-radius:12px 12px 0 0; border:1px solid var(--line);
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:14px;
+    background:var(--panel);
+  }
+  .podbar .med{font-size:30px}
+  .podbar .sc{font-family:"IBM Plex Mono"; font-size:20px; color:var(--mark)}
+  .podname{font-weight:700; font-size:18px}
+  #podium .winline{font-size:18px; color:var(--dim)}
+
+  .toast{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    background:var(--panel); border:1px solid var(--line); color:var(--paper);
+    border-radius:10px; padding:12px 20px; font-size:15px; opacity:0; transition:opacity .3s; pointer-events:none;
+  }
+  .toast.show{opacity:1}
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>NIGHT<span class="w">&#9679;</span>WATCH <span class="n">QUIZ</span></h1>
+    <span class="sub">RYA-STYLE · CC / DS / CS · MIXED WATCH</span>
+  </div>
+  <div class="codechip"><span class="lbl">BOARDING CODE</span><span id="codeTxt">····</span></div>
+</header>
+
+<main>
+  <!-- LOBBY -->
+  <section id="lobby">
+    <h2>Scan to board · <em id="crewCount">0 crew</em> aboard</h2>
+    <div class="qrwrap"><div id="qr"></div></div>
+    <div class="joinurl mono" id="joinUrl">starting signal server…</div>
+    <div class="crewrow" id="crewRow"></div>
+    <button class="btn" id="startBtn" disabled>Cast off — start the quiz</button>
+    <p class="hint">Each phone picks a horn. When a question appears, hit your buzzer — first horn sounds and that phone gets the answer buttons. Right answers earn points, wrong ones cost you and hand the buzzers back to everyone else.</p>
+  </section>
+
+  <!-- GAME -->
+  <section id="game">
+    <div class="qcol">
+      <div class="qtop">
+        <span class="badge" id="qBadge">—</span>
+        <span class="qnum mono" id="qNum"></span>
+        <span class="stake mono" id="qStake"></span>
+      </div>
+      <div class="qtext" id="qText"></div>
+      <div class="gfxbox" id="qGfx" style="display:none"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="statusbar">
+        <div class="lamp idle" id="lamp"></div>
+        <div id="statusTxt">Standing by…</div>
+        <div class="timer" id="timer"></div>
+      </div>
+      <div class="ctrls">
+        <button class="btn ghost" id="revealBtn">Reveal answer</button>
+        <button class="btn" id="nextBtn">Next question</button>
+        <button class="btn ghost" id="endBtn">End quiz</button>
+      </div>
+    </div>
+    <aside class="lcol">
+      <h3>LEADERBOARD</h3>
+      <div id="lboard"></div>
+    </aside>
+  </section>
+
+  <!-- PODIUM -->
+  <section id="podium">
+    <h2>&#9875; Final standings</h2>
+    <div class="podrow" id="podRow"></div>
+    <div class="winline" id="winLine"></div>
+    <button class="btn" id="againBtn">Sail it again (same crew)</button>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.2/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="audio.js"></script>
+<script src="gfx.js"></script>
+<script src="questions.js"></script>
+<script>
+"use strict";
+/* ============ helpers ============ */
+const $ = (id) => document.getElementById(id);
+const shuffle = (arr) => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 2600); }
+
+/* ============ room + peer ============ */
+const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+const code = Array.from({ length: 4 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join("");
+$("codeTxt").textContent = code;
+
+const players = new Map();   // peerId -> {conn, name, sound, score, locked}
+let phase = "LOBBY";         // LOBBY | ARMED | BUZZED | REVEAL | END
+let order = [], qi = -1, cur = null, winnerId = null, countdown = null, secsLeft = 0;
+
+const peer = new Peer("nwq-" + code, { debug: 1 });
+peer.on("open", () => {
+  const url = new URL("play.html", location.href);
+  url.search = "?g=" + code;
+  $("joinUrl").textContent = url.toString();
+  new QRCode($("qr"), { text: url.toString(), width: 240, height: 240, colorDark: "#060D18", colorLight: "#EDE6D6" });
+});
+peer.on("error", (e) => {
+  if (e.type === "unavailable-id") { location.reload(); return; }
+  toast("Connection issue: " + e.type + " — check your internet");
+});
+peer.on("connection", (conn) => {
+  conn.on("data", (m) => handleMsg(conn, m));
+  conn.on("close", () => {
+    const p = players.get(conn.peer);
+    if (p) { p.conn = null; renderCrew(); renderBoard(); toast(p.name + " lost signal"); }
+  });
+});
+
+function send(p, m) { try { if (p.conn && p.conn.open) p.conn.send(m); } catch (e) {} }
+function broadcast(m, exceptId) { for (const [id, p] of players) if (id !== exceptId) send(p, m); }
+function activeIds() { return [...players.keys()].filter(id => players.get(id).conn); }
+
+/* ============ messages from phones ============ */
+function handleMsg(conn, m) {
+  if (m.t === "join") {
+    /* reconnect by name keeps the score */
+    let existing = null;
+    for (const [id, p] of players) if (p.name.toLowerCase() === String(m.name).toLowerCase()) existing = [id, p];
+    const taken = new Set([...players.values()].filter(p => !existing || p !== existing[1]).map(p => p.sound));
+    let sound = m.sound;
+    if (taken.has(sound)) sound = Object.keys(HORNS).find(k => !taken.has(k)) || m.sound;
+
+    let rec;
+    if (existing) { rec = existing[1]; players.delete(existing[0]); rec.conn = conn; rec.sound = sound; }
+    else rec = { conn, name: String(m.name).slice(0, 14), sound, score: 0, locked: false };
+    players.set(conn.peer, rec);
+
+    send(rec, { t: "hello", name: rec.name, sound, score: rec.score, horn: HORNS[sound].label });
+    if (phase === "LOBBY") send(rec, { t: "phase", p: "lobby" });
+    else if (phase === "ARMED") send(rec, { t: "arm", locked: rec.locked });
+    else send(rec, { t: "wait" });
+    renderCrew(); renderBoard();
+    toast(rec.name + " came aboard as the " + HORNS[sound].label);
+  }
+
+  if (m.t === "buzz" && phase === "ARMED") {
+    const p = players.get(conn.peer);
+    if (!p || p.locked) return;
+    phase = "BUZZED"; winnerId = conn.peer;
+    playHorn(p.sound);
+    send(p, { t: "won", opts: cur.opts, secs: 20 });
+    broadcast({ t: "lost", name: p.name }, conn.peer);
+    setLamp("buzzed"); $("statusTxt").innerHTML = "&#9888;&#65039; <b>" + esc(p.name) + "</b> buzzed in — answering on their phone…";
+    startCountdown(20, () => judge(winnerId, -1));
+  }
+
+  if (m.t === "ans" && phase === "BUZZED" && conn.peer === winnerId) {
+    judge(conn.peer, m.i);
+  }
+}
+
+/* ============ game flow ============ */
+$("startBtn").onclick = () => { unlockAudio(); order = shuffle(QUESTIONS.map((_, i) => i)); qi = -1; for (const p of players.values()) p.score = 0; nextQuestion(); };
+$("nextBtn").onclick = () => nextQuestion();
+$("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); };
+$("endBtn").onclick = () => endQuiz();
+$("againBtn").onclick = () => { $("podium").classList.remove("active"); $("startBtn").onclick(); };
+
+function nextQuestion() {
+  stopCountdown();
+  qi++;
+  if (qi >= order.length) return endQuiz();
+  const src = QUESTIONS[order[qi]];
+  /* shuffle options, track the right one */
+  const idx = shuffle(src.opts.map((_, i) => i));
+  cur = { lvl: src.lvl, q: src.q, gfx: src.gfx || null, opts: idx.map(i => src.opts[i]), a: idx.indexOf(src.a) };
+  winnerId = null;
+  for (const p of players.values()) p.locked = false;
+  phase = "ARMED";
+
+  $("lobby").style.display = "none";
+  $("game").classList.add("active");
+  $("podium").classList.remove("active");
+
+  const L = LEVELS[cur.lvl];
+  const b = $("qBadge"); b.textContent = L.label; b.style.color = L.color;
+  $("qNum").textContent = "Q " + (qi + 1) + " / " + order.length;
+  $("qStake").innerHTML = '<span class="up">+' + L.pts + "</span> · <span class=\"dn\">&minus;" + L.pen + "</span>";
+  $("qText").textContent = cur.q;
+  const gbox = $("qGfx");
+  if (cur.gfx) { gbox.style.display = "block"; gbox.innerHTML = renderGfx(cur.gfx); }
+  else { gbox.style.display = "none"; gbox.innerHTML = ""; }
+  $("qOpts").innerHTML = cur.opts.map((o, i) =>
+    '<div class="opt" id="opt' + i + '"><span class="key">' + "ABCD"[i] + "</span><span>" + esc(o) + "</span></div>").join("");
+
+  setLamp("armed"); $("statusTxt").textContent = "Buzzers armed — hit your horn!"; $("timer").textContent = "";
+  broadcast({ t: "arm", qnum: qi + 1, total: order.length });
+  renderBoard();
+}
+
+function judge(id, i) {
+  stopCountdown();
+  const p = players.get(id); if (!p) return;
+  const L = LEVELS[cur.lvl];
+  if (i === cur.a) {
+    p.score += L.pts; p.delta = "+" + L.pts;
+    send(p, { t: "judge", ok: true, delta: L.pts, score: p.score });
+    $("statusTxt").innerHTML = "&#9989; <b>" + esc(p.name) + "</b> takes it — <b>+" + L.pts + "</b>";
+    reveal(i);
+  } else {
+    p.score -= L.pen; p.delta = "−" + L.pen; p.locked = true;
+    send(p, { t: "judge", ok: false, delta: -L.pen, score: p.score });
+    if (i >= 0) { const el = $("opt" + i); if (el) el.classList.add("wrongpick"); }
+    const remaining = activeIds().filter(x => !players.get(x).locked);
+    renderBoard();
+    if (remaining.length === 0) {
+      $("statusTxt").innerHTML = "&#10060; <b>" + esc(p.name) + "</b> " + (i < 0 ? "ran out of time" : "got it wrong") + " — nobody left to buzz";
+      reveal(null);
+    } else {
+      phase = "ARMED"; winnerId = null;
+      setLamp("armed");
+      $("statusTxt").innerHTML = "&#10060; <b>" + esc(p.name) + "</b> " + (i < 0 ? "timed out" : "wrong") + " (&minus;" + L.pen + ") — buzzers re-armed for the rest!";
+      for (const rid of activeIds()) send(players.get(rid), rid === id ? { t: "lockout" } : { t: "arm", locked: players.get(rid).locked });
+      return;
+    }
+  }
+}
+
+function reveal(pickedIdx) {
+  phase = "REVEAL"; stopCountdown();
+  const el = $("opt" + cur.a); if (el) el.classList.add("correct");
+  setLamp("idle");
+  if (pickedIdx === null) $("statusTxt").innerHTML = "Answer revealed — <b>" + "ABCD"[cur.a] + "</b>. On to the next one.";
+  broadcast({ t: "reveal", a: "ABCD"[cur.a], text: cur.opts[cur.a] });
+  renderBoard();
+}
+
+function endQuiz() {
+  phase = "END"; stopCountdown();
+  $("game").classList.remove("active");
+  $("lobby").style.display = "none";
+  $("podium").classList.add("active");
+  const ranked = [...players.values()].sort((a, b) => b.score - a.score);
+  const medals = ["🥇", "🥈", "🥉", "⚓"];
+  const heights = [190, 150, 120, 100];
+  const displayOrder = ranked.length >= 3 ? [1, 0, 2].concat(ranked.slice(3).map((_, k) => k + 3)) : ranked.map((_, k) => k);
+  $("podRow").innerHTML = displayOrder.filter(k => k < ranked.length).map(k => {
+    const p = ranked[k];
+    return '<div class="podbox"><div class="podname">' + HORNS[p.sound].icon + " " + esc(p.name) + '</div>' +
+      '<div class="podbar" style="height:' + (heights[k] || 90) + 'px"><span class="med">' + (medals[k] || "") + '</span><span class="sc">' + p.score + "</span></div></div>";
+  }).join("");
+  $("winLine").textContent = ranked.length ? ranked[0].name + " has the helm — well sailed, crew." : "";
+  ranked.forEach((p, k) => send(p, { t: "end", place: k + 1, score: p.score, of: ranked.length }));
+  if (ranked.length) playHorn(ranked[0].sound);
+}
+
+/* ============ countdown ============ */
+function startCountdown(secs, onExpire) {
+  stopCountdown(); secsLeft = secs;
+  $("timer").textContent = secsLeft + "s";
+  countdown = setInterval(() => {
+    secsLeft--;
+    $("timer").textContent = secsLeft > 0 ? secsLeft + "s" : "";
+    if (secsLeft <= 0) { stopCountdown(); onExpire(); }
+  }, 1000);
+}
+function stopCountdown() { if (countdown) clearInterval(countdown); countdown = null; $("timer").textContent = ""; }
+function setLamp(cls) { $("lamp").className = "lamp " + cls; }
+
+/* ============ rendering ============ */
+function renderCrew() {
+  const live = [...players.values()];
+  $("crewCount").textContent = live.length + (live.length === 1 ? " crew" : " crew");
+  $("crewRow").innerHTML = live.map(p =>
+    '<div class="crewchip"><span class="ic">' + HORNS[p.sound].icon + "</span>" + esc(p.name) + (p.conn ? "" : ' <span class="mono" style="color:var(--port)">offline</span>') + "</div>").join("");
+  $("startBtn").disabled = live.filter(p => p.conn).length === 0;
+}
+function renderBoard() {
+  const ranked = [...players.values()].sort((a, b) => b.score - a.score);
+  $("lboard").innerHTML = ranked.map((p, k) =>
+    '<div class="lrow' + (k === 0 && ranked.length > 1 ? " lead" : "") + '">' +
+    '<span class="pos">' + (k + 1) + "</span><span class=\"ic\">" + HORNS[p.sound].icon + "</span>" +
+    '<span class="nm">' + esc(p.name) + (p.locked && phase === "ARMED" ? ' <span class="lockedtag">LOCKED</span>' : "") + (p.conn ? "" : ' <span class="lockedtag">OFFLINE</span>') + "</span>" +
+    (p.delta ? '<span class="delta ' + (p.delta[0] === "+" ? "up" : "dn") + '">' + p.delta + "</span>" : "") +
+    '<span class="sc">' + p.score + "</span></div>").join("");
+  for (const p of players.values()) p.delta = null;
+}
+</script>
+</body>
+</html>
