@@ -196,7 +196,7 @@
   <p class="sub" id="endMsg"></p>
 </section>
 
-<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="mqtt.min.js"></script>
 <script src="audio.js"></script>
 <script>
 "use strict";
@@ -214,6 +214,7 @@ function sendHost(m) {
 }
 
 function connect() {
+  if (typeof mqtt === "undefined") { $("joinBtn").disabled = false; $("joinErr").textContent = "Couldn't load the connection library — refresh and try again."; return; }
   const url = BROKERS[brokerIdx] || BROKERS[0];
   client = mqtt.connect(url, {
     clientId: "nwqp_" + pid,
