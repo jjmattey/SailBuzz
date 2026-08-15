@@ -284,6 +284,58 @@ function gfxCar(g) {
   return dayScene(inner, 262);
 }
 
+/* Engine layout schematic, viewed from above, on a workshop bench */
+function gfxEngine(g) {
+  const CYL = "#9FB4C6", BLOCK = "#24425F", LINE = "#152C42", HOT = "#FF6B1A";
+  const cyl = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r||24}" fill="${CYL}" stroke="${LINE}" stroke-width="3"/>
+    <circle cx="${x}" cy="${y}" r="${(r||24)*0.45}" fill="none" stroke="${LINE}" stroke-width="2.5"/>`;
+  let art = "", label = "";
+  if (g.layout === "i6") {
+    label = "ONE STRAIGHT ROW OF SIX CYLINDERS";
+    art = `<rect x="150" y="128" width="500" height="84" rx="18" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      ${[0,1,2,3,4,5].map(i => cyl(198 + i * 81, 170)).join("")}
+      <line x1="150" y1="170" x2="110" y2="170" stroke="${LINE}" stroke-width="8" stroke-linecap="round"/>`;
+  }
+  if (g.layout === "flat6") {
+    label = "TWO BANKS OF THREE, LYING FLAT, PISTONS OPPOSED";
+    art = `<rect x="360" y="80" width="80" height="180" rx="14" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      <rect x="180" y="96" width="180" height="52" rx="12" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      <rect x="180" y="192" width="180" height="52" rx="12" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      <rect x="440" y="96" width="180" height="52" rx="12" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      <rect x="440" y="192" width="180" height="52" rx="12" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      ${[0,1,2].map(i => cyl(216 + i * 58, 122, 19)).join("")}
+      ${[0,1,2].map(i => cyl(216 + i * 58, 218, 19)).join("")}
+      ${[0,1,2].map(i => cyl(468 + i * 58, 122, 19)).join("")}
+      ${[0,1,2].map(i => cyl(468 + i * 58, 218, 19)).join("")}
+      <text x="400" y="176" text-anchor="middle" style="font:700 15px 'IBM Plex Mono'" fill="#7FA0BF">CRANK</text>`;
+  }
+  if (g.layout === "v8") {
+    label = "TWO BANKS OF FOUR, MEETING IN A VEE";
+    const bank = (flip) => [0,1,2,3].map(i => {
+      const x = 236 + i * 92, y = flip ? 218 : 122;
+      return `<g transform="rotate(${flip ? 24 : -24} ${x} ${y})"><rect x="${x-26}" y="${y-26}" width="52" height="52" rx="10" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/></g>` + cyl(x, y, 19);
+    }).join("");
+    art = `<rect x="180" y="150" width="440" height="40" rx="12" fill="${BLOCK}" stroke="${LINE}" stroke-width="3"/>
+      ${bank(false)}${bank(true)}
+      <text x="640" y="176" style="font:700 15px 'IBM Plex Mono'" fill="#7FA0BF">CRANK</text>`;
+  }
+  if (g.layout === "rotary") {
+    label = "A TRIANGULAR ROTOR SPINNING IN AN OVAL HOUSING — NO PISTONS";
+    art = `<path d="M 400 60 C 520 60 560 120 560 170 C 560 220 520 280 400 280 C 280 280 240 220 240 170 C 240 120 280 60 400 60 Z"
+        fill="${BLOCK}" stroke="${LINE}" stroke-width="4"/>
+      <path d="M 400 80 A 156 156 0 0 1 478 215 A 156 156 0 0 1 322 215 A 156 156 0 0 1 400 80 Z"
+        fill="${HOT}" stroke="#B44A0E" stroke-width="4" filter="url(#glow)"/>
+      <circle cx="400" cy="176" r="16" fill="#0E1A26" stroke="${LINE}" stroke-width="3"/>`;
+  }
+  return `<svg viewBox="0 0 800 340" class="gfx-svg" role="img">
+    ${GFX_DEFS}
+    <rect width="800" height="340" fill="#0A121C"/>
+    <rect x="60" y="40" width="680" height="260" rx="20" fill="#101E2E" stroke="#1E3049" stroke-width="2"/>
+    ${art}
+    <text x="80" y="326" class="gfx-cap">ENGINE LAYOUT · ${label}</text>
+  </svg>`;
+}
+
 function renderGfx(g) {
   if (!g) return "";
   switch (g.type) {
@@ -295,6 +347,7 @@ function renderGfx(g) {
     case "shapes":   return gfxShapes(g);
     case "dash":     return gfxDash(g);
     case "car":      return gfxCar(g);
+    case "engine":   return gfxEngine(g);
     default: return "";
   }
 }
