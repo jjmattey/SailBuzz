@@ -351,19 +351,30 @@ function gfxEngine(g) {
    Attribution: images are from Wikimedia Commons via Wikipedia. */
 function loadWikiPhoto(spec, imgEl, capEl, onTitle) {
   imgEl.style.display = "none";
+  if (capEl) capEl.textContent = "hoisting the photo\u2026";
+  const fail = () => { if (capEl) capEl.textContent = "(photo unavailable \u2014 the question still stands!)"; };
   fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(spec.wiki))
     .then(r => { if (!r.ok) throw 0; return r.json(); })
     .then(d => {
-      let src = d.thumbnail && d.thumbnail.source;
-      if (src) src = src.replace(/\/(\d+)px-/, "/900px-");
-      if (!src && d.originalimage) src = d.originalimage.source;
-      if (!src) throw 0;
-      imgEl.onload = () => { imgEl.style.display = ""; };
-      imgEl.src = src;
-      if (capEl) capEl.textContent = "Photo: Wikipedia · Wikimedia Commons";
-      if (onTitle) onTitle(d.title || spec.wiki.replace(/_/g, " "));
+      const cands = [];
+      const ow = (d.originalimage && d.originalimage.width) || 0;
+      if (d.thumbnail && d.thumbnail.source) {
+        const t = d.thumbnail.source;
+        if (ow > 960 && /\/\d+px-/.test(t)) cands.push(t.replace(/\/\d+px-/, "/960px-"));
+        cands.push(t);
+      }
+      if (d.originalimage && d.originalimage.source) cands.push(d.originalimage.source);
+      if (!cands.length) { fail(); return; }
+      let k = 0;
+      imgEl.onerror = () => { k++; if (k < cands.length) imgEl.src = cands[k]; else fail(); };
+      imgEl.onload = () => {
+        imgEl.style.display = "";
+        if (capEl) capEl.textContent = "Photo: Wikipedia \u00B7 Wikimedia Commons";
+        if (onTitle) onTitle(d.title || spec.wiki.replace(/_/g, " "));
+      };
+      imgEl.src = cands[0];
     })
-    .catch(() => { if (capEl) capEl.textContent = "(photo unavailable — the question still stands!)"; });
+    .catch(fail);
 }
 
 /* Flashing night light — authentic IALA rhythm signatures (compressed for the quiz) */
