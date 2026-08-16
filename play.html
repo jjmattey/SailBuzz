@@ -250,12 +250,7 @@ function connect() {
   client.on("connect", () => {
     client.subscribe("nightwatch1/" + code + "/p/" + pid);
     sendHost({ t: "join", name: myName, sound: mySound });   // also re-announces after any reconnect
-    if (!joined) {
-      clearTimeout(helloTimer);
-      helloTimer = setTimeout(() => {
-        if (!joined) { $("joinBtn").disabled = false; $("joinErr").textContent = "No reply from the big screen — is it still open? Rescan the QR and try again."; }
-      }, 6000);
-    }
+    startJoinKnock();
   });
   client.on("message", (t, payload) => { try { onMsg(JSON.parse(payload.toString())); } catch (e) {} });
   client.on("error", () => {
@@ -265,6 +260,30 @@ function connect() {
     if (joined) { $("waitTitle").textContent = "Signal lost"; $("waitMsg").textContent = "Reconnecting… hold tight, your score is kept."; show("sWait"); }
   });
 }
+
+/* Keep knocking until the host answers — hosts on phones nap when backgrounded */
+let knockTimer = null, knocks = 0;
+function startJoinKnock() {
+  if (joined) return;
+  clearInterval(knockTimer); knocks = 0;
+  knockTimer = setInterval(() => {
+    if (joined) { clearInterval(knockTimer); return; }
+    knocks++;
+    sendHost({ t: "join", name: myName, sound: mySound });
+    if (knocks === 3) $("joinErr").textContent = "Knocking on the host's door… if their screen is locked or they're in another app, ask them to open the quiz.";
+    if (knocks >= 25) {
+      clearInterval(knockTimer);
+      $("joinBtn").disabled = false;
+      $("joinErr").textContent = "No reply from the host after a good knock. Check they're on the lobby screen, then try again.";
+    }
+  }, 3000);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && myName && client) {
+    if (!client.connected && client.reconnect) try { client.reconnect(); } catch (e) {}
+    sendHost({ t: "join", name: myName, sound: mySound });   // harmless re-announce, restores host registry
+  }
+});
 
 function show(id) { document.querySelectorAll("section").forEach(s => s.classList.remove("active")); $(id).classList.add("active"); }
 function setScore(s) { myScore = s; $("myScore").textContent = "PTS " + s; }
@@ -325,9 +344,15 @@ $("joinBtn").onclick = () => {
 };
 
 function onMsg(m) {
+  if (m.t === "marco") {
+    if (myName && !joined) { sendHost({ t: "join", name: myName, sound: mySound }); }
+    return;
+  }
+
   if (m.t === "hello") {
     const firstHello = !joined;
-    joined = true; clearTimeout(helloTimer);
+    joined = true; clearTimeout(helloTimer); clearInterval(knockTimer);
+    $("joinErr").textContent = "";
     mySound = m.sound; setScore(m.score);
     $("whoami").textContent = HORNS[mySound].icon + " " + myName.toUpperCase();
     $("hornNote").textContent = "YOUR HORN: " + m.horn.toUpperCase();
