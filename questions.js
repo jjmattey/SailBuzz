@@ -190,6 +190,30 @@ const SAIL_QUESTIONS = [
   { lvl: "CS", q: "Two cones with their APEXES together, hoisted by day. She is…",
     opts: ["Fishing", "Motor-sailing", "Dredging", "A pilot vessel"], a: 0,
     gfx: { type: "shapes", style: "cones2" } }
+,
+  { lvl: "DS", q: "Night passage. This white light never stops its rapid flashing. What is it?",
+    opts: ["A north cardinal mark — pass NORTH of it", "A south cardinal mark", "A safe water mark", "A lighthouse"], a: 0,
+    gfx: { type: "flash", pattern: "N" } },
+
+  { lvl: "CS", q: "Watch the rhythm: quick flashes in groups of THREE. Which mark is this?",
+    opts: ["East cardinal — pass EAST of it", "West cardinal", "North cardinal", "Isolated danger mark"], a: 0,
+    gfx: { type: "flash", pattern: "E" } },
+
+  { lvl: "CS", q: "Six quick flashes then one LONG flash, over and over. You should pass…",
+    opts: ["SOUTH of it — it's a south cardinal", "NORTH of it", "Close on either side", "Between it and the shore"], a: 0,
+    gfx: { type: "flash", pattern: "S" } },
+
+  { lvl: "CS", q: "Count them — NINE quick flashes in each group. What lies at this mark?",
+    opts: ["Danger to the east — it's a west cardinal, pass WEST", "Danger to the west", "Safe water all round", "A wreck you may pass either side"], a: 0,
+    gfx: { type: "flash", pattern: "W" } },
+
+  { lvl: "CS", q: "A white light flashing in groups of TWO. What's beneath it?",
+    opts: ["An isolated danger — keep clear, water is safe around it", "Safe water all round", "A north cardinal's shoal", "The harbour entrance"], a: 0,
+    gfx: { type: "flash", pattern: "ID" } },
+
+  { lvl: "DS", q: "One LONG lazy flash every few seconds. What welcome sight is this?",
+    opts: ["A safe water mark — navigable water all around", "An isolated danger mark", "A vessel aground", "An east cardinal"], a: 0,
+    gfx: { type: "flash", pattern: "SW" } }
 ];
 
 /* ==================== PETROLHEADS PACK ==================== */
@@ -444,7 +468,56 @@ const SHOW_QUESTIONS = [
     opts: ["Flat-twelve", "V12", "Flat-six", "V10"], a: 0 },
 
   { lvl: "CO", q: "The BMW E30 M3's high-revving engine was unusual for an M3 because it was a…",
-    opts: ["Four-cylinder", "V8", "Straight-six", "V6"], a: 0 }
+    opts: ["Four-cylinder", "V8", "Straight-six", "V6"], a: 0 },
+
+  /* ---------- photo rounds (images from Wikipedia / Wikimedia Commons) ---------- */
+  { lvl: "SR", q: "Name this car.",
+    opts: ["VW Beetle", "Fiat 500", "Morris Minor", "Citro\u00EBn 2CV"], a: 0,
+    photo: { wiki: "Volkswagen_Beetle" } },
+
+  { lvl: "SR", q: "Name this car.",
+    opts: ["The classic Mini", "Fiat 500", "Hillman Imp", "Austin Allegro"], a: 0,
+    photo: { wiki: "Mini" } },
+
+  { lvl: "SR", q: "Name this car.",
+    opts: ["Porsche 911", "Porsche 928", "Jaguar XJS", "Datsun 240Z"], a: 0,
+    photo: { wiki: "Porsche_911" } },
+
+  { lvl: "SR", q: "Gullwing doors, stainless steel, time travel. Name this car.",
+    opts: ["DMC DeLorean", "Bricklin SV-1", "Lotus Esprit", "Mercedes 300SL"], a: 0,
+    photo: { wiki: "DMC_DeLorean" } },
+
+  { lvl: "TU", q: "Name this car.",
+    opts: ["Jaguar E-Type", "Aston Martin DB6", "Triumph Spitfire", "MGB GT"], a: 0,
+    photo: { wiki: "Jaguar_E-Type" } },
+
+  { lvl: "TU", q: "Name this car.",
+    opts: ["Mazda MX-5", "Toyota MR2", "Lotus Elan", "Honda S2000"], a: 0,
+    photo: { wiki: "Mazda_MX-5" } },
+
+  { lvl: "TU", q: "Name this futuristic 1950s icon.",
+    opts: ["Citro\u00EBn DS", "Renault 16", "Peugeot 404", "NSU Ro 80"], a: 0,
+    photo: { wiki: "Citro\u00EBn_DS" } },
+
+  { lvl: "TU", q: "Name this car.",
+    opts: ["Bugatti Veyron", "Bugatti Chiron", "McLaren MP4-12C", "Pagani Huayra"], a: 0,
+    photo: { wiki: "Bugatti_Veyron" } },
+
+  { lvl: "CO", q: "Name this car.",
+    opts: ["Lamborghini Miura", "Ferrari 365 Daytona", "De Tomaso Pantera", "Maserati Ghibli"], a: 0,
+    photo: { wiki: "Lamborghini_Miura" } },
+
+  { lvl: "CO", q: "Name this Le Mans legend.",
+    opts: ["Ford GT40", "Lola T70", "Ferrari 330 P4", "Porsche 917"], a: 0,
+    photo: { wiki: "Ford_GT40" } },
+
+  { lvl: "CO", q: "Name this car.",
+    opts: ["Ferrari F40", "Ferrari 288 GTO", "Lancia Stratos", "Ferrari Testarossa"], a: 0,
+    photo: { wiki: "Ferrari_F40" } },
+
+  { lvl: "CO", q: "Name Bond's most famous company car.",
+    opts: ["Aston Martin DB5", "Aston Martin DB4", "Jensen Interceptor", "Bristol 411"], a: 0,
+    photo: { wiki: "Aston_Martin_DB5" } }
 ];
 
 /* ==================== PACK REGISTRY ==================== */
