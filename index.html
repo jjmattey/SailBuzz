@@ -196,7 +196,8 @@
     .modebtn{width:100%; max-width:430px}
     .crewrow{min-height:0}
     .hint{font-size:12px; padding:0 4px}
-    #startBtn{width:100%; max-width:430px; padding:16px; font-size:18px; position:sticky; bottom:10px; z-index:5; box-shadow:0 6px 24px rgba(0,0,0,.55)}
+    #startBtn{width:100%; max-width:430px; padding:16px; font-size:18px; position:sticky; bottom:calc(10px + env(safe-area-inset-bottom)); z-index:5; box-shadow:0 6px 24px rgba(0,0,0,.75); background:var(--mark); color:#0A1420; border-color:var(--mark)}
+    #startBtn:disabled{background:var(--panel2); color:var(--dim); border-color:var(--line)}
 
     #game{flex-direction:column; overflow-y:auto}
     .qcol{padding:12px 12px 6px; gap:10px}
@@ -242,7 +243,7 @@
       <button class="sharebtn" id="copyBtn" disabled>&#128203; Copy join link</button>
       <button class="sharebtn" id="shareBtn" style="display:none" disabled>&#128228; Send link&#8230;</button>
     </div>
-    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 11 · host from your phone</div>
+    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 12 · reliable joins on phone hosts</div>
     <div class="crewrow" id="crewRow"></div>
     <div class="moderow" id="packRow"></div>
     <div class="moderow">
@@ -429,6 +430,23 @@ function handleMsg(pid, m) {
   }
 }
 
+/* ============ stay awake & recover (phone hosting) ============ */
+let wakeLock = null;
+async function grabWakeLock() {
+  try { if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  grabWakeLock();
+  if (client) {
+    if (!client.connected && client.reconnect) try { client.reconnect(); } catch (e) {}
+    try { broadcast({ t: "marco" }); } catch (e) {}
+  }
+});
+setInterval(() => {   /* lobby heartbeat: lets phones that knocked while we napped get in */
+  if (client && client.connected && phase === "LOBBY") broadcast({ t: "marco" });
+}, 4000);
+
 /* ============ share the join link ============ */
 let joinLink = "";
 let pendingPhotoTitle = null;
@@ -437,6 +455,7 @@ function revealPhotoCredit() {
   if (cap && pendingPhotoTitle) cap.textContent = "Photo: Wikipedia — " + pendingPhotoTitle + " · Wikimedia Commons";
 }
 $("copyBtn").onclick = async () => {
+  grabWakeLock();
   if (!joinLink) return;
   let ok = false;
   try { await navigator.clipboard.writeText(joinLink); ok = true; } catch (e) {
@@ -476,7 +495,7 @@ let answers = new Map(), qStart = 0;
 $("modeAll").onclick  = () => { mode = "all";  $("modeAll").classList.add("sel"); $("modeBuzz").classList.remove("sel"); };
 $("modeBuzz").onclick = () => { mode = "buzz"; $("modeBuzz").classList.add("sel"); $("modeAll").classList.remove("sel"); };
 
-$("startBtn").onclick = () => { unlockAudio(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = shuffle(bank.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; p.fifty = false; } nextQuestion(); };
+$("startBtn").onclick = () => { unlockAudio(); grabWakeLock(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = shuffle(bank.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; p.fifty = false; } nextQuestion(); };
 $("nextBtn").onclick = () => nextQuestion();
 $("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); else if (phase === "ANSWERING") finishAllplay(); };
 $("endBtn").onclick = () => endQuiz();
