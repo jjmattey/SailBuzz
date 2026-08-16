@@ -24,6 +24,17 @@ function seaScene(inner, horizonY = 210) {
     <rect width="800" height="${horizonY}" fill="url(#sky)"/>
     <rect y="${horizonY}" width="800" height="${340 - horizonY}" fill="url(#seaG)"/>
     <line x1="0" y1="${horizonY}" x2="800" y2="${horizonY}" stroke="#16283E" stroke-width="1.5"/>
+    <g opacity="0.5">
+      <path d="M -80 ${horizonY + 26} q 20 -7 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0" stroke="#1E4266" stroke-width="2.5" fill="none">
+        <animateTransform attributeName="transform" type="translate" from="0 0" to="-80 0" dur="7s" repeatCount="indefinite"/>
+      </path>
+      <path d="M -80 ${horizonY + 58} q 25 -8 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0 t 50 0" stroke="#193A5C" stroke-width="3" fill="none">
+        <animateTransform attributeName="transform" type="translate" from="-100 0" to="0 0" dur="9s" repeatCount="indefinite"/>
+      </path>
+    </g>
+    <rect x="640" y="${horizonY + 4}" width="120" height="26" fill="#EDE6D6" opacity="0.05" rx="8">
+      <animate attributeName="opacity" values="0.04;0.1;0.04" dur="5s" repeatCount="indefinite"/>
+    </rect>
     <circle cx="700" cy="52" r="17" fill="#EDE6D6" opacity="0.85"/>
     <circle cx="693" cy="47" r="15" fill="#050B14"/>
     ${stars()}
@@ -336,6 +347,54 @@ function gfxEngine(g) {
   </svg>`;
 }
 
+/* Load an article's lead photo from Wikipedia (CORS-enabled public API).
+   Attribution: images are from Wikimedia Commons via Wikipedia. */
+function loadWikiPhoto(spec, imgEl, capEl, onTitle) {
+  imgEl.style.display = "none";
+  fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(spec.wiki))
+    .then(r => { if (!r.ok) throw 0; return r.json(); })
+    .then(d => {
+      let src = d.thumbnail && d.thumbnail.source;
+      if (src) src = src.replace(/\/(\d+)px-/, "/900px-");
+      if (!src && d.originalimage) src = d.originalimage.source;
+      if (!src) throw 0;
+      imgEl.onload = () => { imgEl.style.display = ""; };
+      imgEl.src = src;
+      if (capEl) capEl.textContent = "Photo: Wikipedia · Wikimedia Commons";
+      if (onTitle) onTitle(d.title || spec.wiki.replace(/_/g, " "));
+    })
+    .catch(() => { if (capEl) capEl.textContent = "(photo unavailable — the question still stands!)"; });
+}
+
+/* Flashing night light — authentic IALA rhythm signatures (compressed for the quiz) */
+function gfxFlash(g) {
+  const P = {
+    N:  { times: Array.from({length:10},(_,i)=>i*0.6), lens: Array(10).fill(0.28), period: 6,   note: "CONTINUOUS QUICK FLASHES" },
+    E:  { times: [0,0.6,1.2],                          lens: [0.28,0.28,0.28],    period: 4.2, note: "GROUPS OF 3 QUICK FLASHES" },
+    S:  { times: [0,0.6,1.2,1.8,2.4,3.0,4.0],          lens: [0.28,0.28,0.28,0.28,0.28,0.28,1.3], period: 7, note: "6 QUICK FLASHES + 1 LONG" },
+    W:  { times: [0,0.6,1.2,1.8,2.4,3.0,3.6,4.2,4.8],  lens: Array(9).fill(0.28), period: 7.6, note: "GROUPS OF 9 QUICK FLASHES" },
+    ID: { times: [0,1.1],                              lens: [0.45,0.45],         period: 4.6, note: "GROUPS OF 2 FLASHES" },
+    SW: { times: [0],                                  lens: [1.6],               period: 5,   note: "ONE LONG FLASH, THEN DARK" }
+  }[g.pattern] || { times: [0], lens: [0.5], period: 3, note: "" };
+  let vals = ["0"], keys = ["0"];
+  P.times.forEach((t, i) => {
+    keys.push((t / P.period).toFixed(4), ((t + 0.04) / P.period).toFixed(4), ((t + P.lens[i]) / P.period).toFixed(4), ((t + P.lens[i] + 0.04) / P.period).toFixed(4));
+    vals.push("0", "1", "1", "0");
+  });
+  keys.push("1"); vals.push("0");
+  const anim = `<animate attributeName="opacity" values="${vals.join(";")}" keyTimes="${keys.join(";")}" dur="${P.period}s" repeatCount="indefinite"/>`;
+  return seaScene(`
+    <path d="M 372 258 L 428 258 L 416 292 L 384 292 Z" fill="#0E1A26" stroke="#1E3049" stroke-width="2"/>
+    <rect x="396" y="196" width="8" height="62" fill="#0E1A26"/>
+    <g opacity="0">
+      <circle cx="400" cy="184" r="34" fill="#FFFFFF" opacity="0.13"/>
+      <circle cx="400" cy="184" r="17" fill="#FFFFFF" opacity="0.35"/>
+      <circle cx="400" cy="184" r="8"  fill="#FFFFFF" filter="url(#glow)"/>
+      ${anim}
+    </g>
+    <text x="80" y="326" class="gfx-cap">NIGHT · A WHITE LIGHT FLASHES · ${P.note} (RHYTHM SPED UP FOR THE QUIZ)</text>`, 250);
+}
+
 function renderGfx(g) {
   if (!g) return "";
   switch (g.type) {
@@ -348,6 +407,7 @@ function renderGfx(g) {
     case "dash":     return gfxDash(g);
     case "car":      return gfxCar(g);
     case "engine":   return gfxEngine(g);
+    case "flash":    return gfxFlash(g);
     default: return "";
   }
 }
