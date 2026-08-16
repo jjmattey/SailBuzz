@@ -96,6 +96,16 @@
   .kbtn.pick{outline:3px solid #fff}
   .kbtn:disabled{opacity:.35}
   .streak{font-family:"IBM Plex Mono"; font-size:15px; color:var(--mark)}
+  .pgfx{width:100%; max-width:430px}
+  .pgfx:empty{display:none}
+  .pgfx svg{width:100%; height:auto; max-height:27vh; border-radius:12px; border:1px solid var(--line)}
+  .pgfx img{max-width:100%; max-height:27vh; border-radius:12px; border:1px solid var(--line); display:block; margin:0 auto}
+  .pgfx .cap{font-family:"IBM Plex Mono"; font-size:11px; color:var(--dim); margin-top:4px; text-align:center}
+  .gfx-cap{font-family:"IBM Plex Mono"; font-size:13px; letter-spacing:.2em; fill:#4E637E}
+  .gfx-cap.day{fill:#2A4E6E}
+  .popts{width:100%; max-width:430px; text-align:left; font-size:15px; line-height:1.6; color:var(--paper)}
+  .popts b{font-family:"IBM Plex Mono"; color:var(--mark); margin-right:6px}
+  body.bigtext .popts{font-size:20px}
   .fiftybtn{
     font-family:"IBM Plex Mono"; font-weight:600; font-size:14px; color:var(--mark);
     background:transparent; border:1.5px dashed var(--mark); border-radius:10px;
@@ -163,6 +173,9 @@
 
 <!-- BUZZER -->
 <section id="sBuzz">
+  <div class="qphone" id="bQ"></div>
+  <div class="pgfx" id="bGfx"></div>
+  <div class="popts" id="bOpts"></div>
   <div id="buzzWrap">
     <div class="ring"></div>
     <button id="buzzBtn">BUZZ</button>
@@ -175,6 +188,7 @@
 <section id="sAns">
   <h2>You're on the helm!</h2>
   <div class="qphone" id="aQ"></div>
+  <div class="pgfx" id="aGfx"></div>
   <div id="ansTimer"></div>
   <button class="fiftybtn" id="fiftyA">&#9986;&#65039; 50:50 &#183; knock out two wrong answers</button>
   <div class="ansbtns" id="ansBtns"></div>
@@ -184,6 +198,7 @@
 <section id="sK">
   <h2 id="kTitle">Lock in your answer</h2>
   <div class="qphone" id="kQ"></div>
+  <div class="pgfx" id="kGfx"></div>
   <div id="kTimer" class="mono" style="font-size:20px;color:var(--mark)"></div>
   <button class="fiftybtn" id="fiftyK">&#9986;&#65039; 50:50 &#183; knock out two wrong answers</button>
   <div class="kgrid" id="kGrid"></div>
@@ -208,6 +223,7 @@
 
 <script src="mqtt.min.js"></script>
 <script src="audio.js"></script>
+<script src="gfx.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -253,6 +269,17 @@ function connect() {
 function show(id) { document.querySelectorAll("section").forEach(s => s.classList.remove("active")); $(id).classList.add("active"); }
 function setScore(s) { myScore = s; $("myScore").textContent = "PTS " + s; }
 function vibrate(p) { if (navigator.vibrate) try { navigator.vibrate(p); } catch (e) {} }
+
+/* question media (SVG graphics or Wikipedia photos) on the phone */
+function showMedia(el, m) {
+  el.innerHTML = "";
+  if (m.photo) {
+    el.innerHTML = '<img alt="question photo"><div class="cap">hoisting the photo\u2026</div>';
+    loadWikiPhoto(m.photo, el.querySelector("img"), el.querySelector(".cap"));
+  } else if (m.gfx) {
+    el.innerHTML = renderGfx(m.gfx);
+  }
+}
 
 /* 50:50 lifeline — once per game, validated by the host */
 let usedFifty = false;
@@ -313,9 +340,14 @@ function onMsg(m) {
     if (m.qnum === 1) { usedFifty = false; }
     armed = !m.locked;
     $("buzzBtn").disabled = !!m.locked;
+    if (m.q) {
+      $("bQ").textContent = (m.qnum ? "Q" + m.qnum + (m.lvl ? " \u00B7 " + m.lvl : "") + " \u2014 " : "") + m.q;
+      showMedia($("bGfx"), m);
+      $("bOpts").innerHTML = (m.opts || []).map((o, i) => "<div><b>" + "ABCD"[i] + "</b>" + o.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])) + "</div>").join("");
+    } else { $("bQ").textContent = ""; $("bGfx").innerHTML = ""; $("bOpts").innerHTML = ""; }
     $("buzzState").innerHTML = m.locked
       ? "You're <b>locked out</b> of this question — wrong answer. Next one's yours."
-      : "Buzzers <b>ARMED</b> — read the big screen and hit it!";
+      : "Buzzers <b>ARMED</b> — know it? HIT IT!";
     show("sBuzz");
     if (!m.locked) vibrate(60);
   }
@@ -330,6 +362,7 @@ function onMsg(m) {
     ];
     $("kTitle").textContent = "Q" + m.qnum + (m.lvl ? " · " + m.lvl : "");
     $("kQ").textContent = m.q || "";
+    showMedia($("kGfx"), m);
     $("kState").textContent = "Faster answers score more — streaks pay bonus.";
     $("kGrid").innerHTML = "";
     let picked = false;
@@ -360,6 +393,7 @@ function onMsg(m) {
     vibrate([80, 40, 80]);
     playHorn(mySound);
     $("aQ").textContent = m.q || "";
+    showMedia($("aGfx"), m);
     fiftyLabel();
     $("ansBtns").innerHTML = "";
     m.opts.forEach((o, i) => {
