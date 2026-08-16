@@ -206,7 +206,7 @@
       <button class="sharebtn" id="copyBtn" disabled>&#128203; Copy join link</button>
       <button class="sharebtn" id="shareBtn" style="display:none" disabled>&#128228; Send link&#8230;</button>
     </div>
-    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 9 · showroom pack: models & engines</div>
+    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 10 · photos, flashing lights, remote play</div>
     <div class="crewrow" id="crewRow"></div>
     <div class="moderow" id="packRow"></div>
     <div class="moderow">
@@ -351,7 +351,7 @@ function handleMsg(pid, m) {
 
     send(rec, { t: "hello", name: rec.name, sound, score: rec.score, horn: HORNS[sound].label });
     if (phase === "LOBBY") send(rec, { t: "phase", p: "lobby" });
-    else if (phase === "ARMED") send(rec, { t: "arm", locked: rec.locked });
+    else if (phase === "ARMED") send(rec, { t: "arm", locked: rec.locked, q: cur ? cur.q : null, lvl: cur ? LEVELS[cur.lvl].label : null, opts: cur ? cur.opts : null, gfx: cur && cur.gfx || null, photo: cur && cur.photo || null });
     else send(rec, { t: "wait" });
     renderCrew(); renderBoard();
     if (!existing) toast(rec.name + " came aboard as the " + HORNS[sound].label);
@@ -362,7 +362,7 @@ function handleMsg(pid, m) {
     if (!p || p.locked) return;
     phase = "BUZZED"; winnerId = pid;
     playHorn(p.sound);
-    send(p, { t: "won", q: cur.q, opts: cur.opts, secs: 20 });
+    send(p, { t: "won", q: cur.q, opts: cur.opts, gfx: cur.gfx || null, photo: cur.photo || null, secs: 20 });
     broadcast({ t: "lost", name: p.name }, pid);
     setLamp("buzzed"); $("statusTxt").innerHTML = "&#9888;&#65039; <b>" + esc(p.name) + "</b> buzzed in — answering on their phone…";
     startCountdown(20, () => judge(winnerId, -1));
@@ -395,6 +395,11 @@ function handleMsg(pid, m) {
 
 /* ============ share the join link ============ */
 let joinLink = "";
+let pendingPhotoTitle = null;
+function revealPhotoCredit() {
+  const cap = $("qPhotoCap");
+  if (cap && pendingPhotoTitle) cap.textContent = "Photo: Wikipedia — " + pendingPhotoTitle + " · Wikimedia Commons";
+}
 $("copyBtn").onclick = async () => {
   if (!joinLink) return;
   let ok = false;
@@ -448,7 +453,7 @@ function nextQuestion() {
   const src = bank[order[qi]];
   /* shuffle options, track the right one */
   const idx = shuffle(src.opts.map((_, i) => i));
-  cur = { lvl: src.lvl, q: src.q, gfx: src.gfx || null, opts: idx.map(i => src.opts[i]), a: idx.indexOf(src.a) };
+  cur = { lvl: src.lvl, q: src.q, gfx: src.gfx || null, photo: src.photo || null, opts: idx.map(i => src.opts[i]), a: idx.indexOf(src.a) };
   winnerId = null;
   answers = new Map(); qStart = Date.now();
   for (const p of players.values()) p.locked = false;
@@ -465,7 +470,13 @@ function nextQuestion() {
     : '<span class="up">+' + L.pts + "</span> · <span class=\"dn\">&minus;" + L.pen + "</span>";
   $("qText").textContent = cur.q;
   const gbox = $("qGfx");
-  if (cur.gfx) { gbox.style.display = "block"; gbox.innerHTML = renderGfx(cur.gfx); }
+  pendingPhotoTitle = null;
+  if (cur.photo) {
+    gbox.style.display = "block";
+    gbox.innerHTML = '<img id="qPhoto" style="max-width:100%;max-height:38vh;border-radius:12px;border:1px solid var(--line)"><div id="qPhotoCap" class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">hoisting the photo…</div>';
+    loadWikiPhoto(cur.photo, $("qPhoto"), $("qPhotoCap"), t => { pendingPhotoTitle = t; });
+  }
+  else if (cur.gfx) { gbox.style.display = "block"; gbox.innerHTML = renderGfx(cur.gfx); }
   else { gbox.style.display = "none"; gbox.innerHTML = ""; }
   $("qOpts").innerHTML = cur.opts.map((o, i) =>
     '<div class="opt" id="opt' + i + '"><span class="key shp" style="background:' + SHAPES[i].c + '">' + SHAPES[i].g + "</span><span>" + esc(o) + '</span><span class="cnt" id="cnt' + i + '" style="display:none"></span></div>').join("");
@@ -474,12 +485,12 @@ function nextQuestion() {
     phase = "ANSWERING";
     setLamp("armed");
     $("statusTxt").innerHTML = "&#127912; Answer on your phones… <b>0 / " + activeIds().length + "</b> locked in";
-    broadcast({ t: "q", q: cur.q, lvl: LEVELS[cur.lvl].label, opts: cur.opts, secs: QT, qnum: qi + 1, total: order.length });
+    broadcast({ t: "q", q: cur.q, lvl: LEVELS[cur.lvl].label, opts: cur.opts, gfx: cur.gfx || null, photo: cur.photo || null, secs: QT, qnum: qi + 1, total: order.length });
     startCountdown(QT, finishAllplay);
   } else {
     phase = "ARMED";
     setLamp("armed"); $("statusTxt").textContent = "Buzzers armed — hit your horn!"; $("timer").textContent = "";
-    broadcast({ t: "arm", qnum: qi + 1, total: order.length });
+    broadcast({ t: "arm", qnum: qi + 1, total: order.length, q: cur.q, lvl: LEVELS[cur.lvl].label, opts: cur.opts, gfx: cur.gfx || null, photo: cur.photo || null });
   }
   renderBoard();
 }
@@ -516,7 +527,7 @@ function finishAllplay() {
   $("statusTxt").innerHTML = (fastest
     ? "&#9989; Fastest right answer: <b>" + esc(fastest.name) + "</b> in " + (fastest.ms / 1000).toFixed(1) + "s (+" + fastest.pts + ")"
     : "&#127754; Nobody got that one — tough question!") + ' <span class="mono" style="color:var(--dim)">· next question in…</span>';
-  renderBoard();
+  renderBoard(); revealPhotoCredit();
   startCountdown(8, nextQuestion);
 }
 
@@ -555,7 +566,7 @@ function reveal(pickedIdx) {
   if (pickedIdx === null) $("statusTxt").innerHTML = "Answer revealed — <b>" + "ABCD"[cur.a] + "</b>.";
   $("statusTxt").innerHTML += ' <span class="mono" style="color:var(--dim)">· next question in…</span>';
   broadcast({ t: "reveal", a: "ABCD"[cur.a], text: cur.opts[cur.a] });
-  renderBoard();
+  renderBoard(); revealPhotoCredit();
   startCountdown(8, nextQuestion);
 }
 
