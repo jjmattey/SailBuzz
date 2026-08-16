@@ -221,6 +221,9 @@
   }
   .sharebtn:hover{border-color:var(--mark)}
   .sharebtn:disabled{opacity:.4; cursor:default}
+  .crewchip, .crewchip *{white-space:normal; word-break:break-word}
+  .crewchip{max-width:280px; text-align:left}
+  #lboard b, #lboard span{word-break:break-word}
 </style>
 </head>
 <body>
@@ -243,7 +246,7 @@
       <button class="sharebtn" id="copyBtn" disabled>&#128203; Copy join link</button>
       <button class="sharebtn" id="shareBtn" style="display:none" disabled>&#128228; Send link&#8230;</button>
     </div>
-    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 13 · car photos fixed</div>
+    <div class="mono" style="font-size:12px;color:var(--dim);margin-top:6px">build 14 · 350+ new questions, faster rounds</div>
     <div class="crewrow" id="crewRow"></div>
     <div class="moderow" id="packRow"></div>
     <div class="moderow">
@@ -382,7 +385,7 @@ function handleMsg(pid, m) {
       rec.pid = pid; rec.online = true; rec.sound = sound;
       if (winnerId === existing[0]) winnerId = pid;
     } else {
-      rec = { pid, online: true, name: String(m.name).slice(0, 14), sound, score: 0, locked: false, streak: 0, fifty: false };
+      rec = { pid, online: true, name: String(m.name).slice(0, 24), sound, score: 0, locked: false, streak: 0, fifty: false };
     }
     players.set(pid, rec);
 
@@ -426,7 +429,7 @@ function handleMsg(pid, m) {
     if (!p || !p.online || answers.has(pid)) return;
     answers.set(pid, { i: m.i, ms: Date.now() - qStart });
     $("statusTxt").innerHTML = "&#127912; Answer on your phones… <b>" + answers.size + " / " + activeIds().length + "</b> locked in";
-    if (answers.size >= activeIds().length) finishAllplay();
+    if (answers.size >= activeIds().length) finishAllplay(true);
   }
 }
 
@@ -495,7 +498,18 @@ let answers = new Map(), qStart = 0;
 $("modeAll").onclick  = () => { mode = "all";  $("modeAll").classList.add("sel"); $("modeBuzz").classList.remove("sel"); };
 $("modeBuzz").onclick = () => { mode = "buzz"; $("modeBuzz").classList.add("sel"); $("modeAll").classList.remove("sel"); };
 
-$("startBtn").onclick = () => { unlockAudio(); grabWakeLock(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = shuffle(bank.map((_, i) => i)); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; p.fifty = false; } nextQuestion(); };
+$("startBtn").onclick = () => { unlockAudio(); grabWakeLock(); bank = PACKS[packKey].questions; LEVELS = PACKS[packKey].levels; order = (() => {
+    const idx = shuffle(bank.map((_, i) => i));
+    const ph = idx.filter(i => bank[i].photo), tx = idx.filter(i => !bank[i].photo);
+    if (!ph.length || !tx.length) return idx;
+    const out = []; let p = 0, t = 0;
+    while (p < ph.length || t < tx.length) {
+      if (p < ph.length) out.push(ph[p++]);
+      if (p < ph.length) out.push(ph[p++]);
+      if (t < tx.length) out.push(tx[t++]);
+    }
+    return out;
+  })(); qi = -1; for (const p of players.values()) { p.score = 0; p.streak = 0; p.fifty = false; } nextQuestion(); };
 $("nextBtn").onclick = () => nextQuestion();
 $("revealBtn").onclick = () => { if (phase === "ARMED" || phase === "BUZZED") reveal(null); else if (phase === "ANSWERING") finishAllplay(); };
 $("endBtn").onclick = () => endQuiz();
@@ -551,7 +565,7 @@ function nextQuestion() {
 }
 
 /* ---- all-play scoring: base × (1 − t/2T), streak bonus +10%/consecutive (max +50%) ---- */
-function finishAllplay() {
+function finishAllplay(allIn) {
   if (phase !== "ANSWERING") return;
   phase = "REVEAL"; stopCountdown(); setLamp("idle");
   const base = LEVELS[cur.lvl].base;
@@ -583,7 +597,7 @@ function finishAllplay() {
     ? "&#9989; Fastest right answer: <b>" + esc(fastest.name) + "</b> in " + (fastest.ms / 1000).toFixed(1) + "s (+" + fastest.pts + ")"
     : "&#127754; Nobody got that one — tough question!") + ' <span class="mono" style="color:var(--dim)">· next question in…</span>';
   renderBoard(); revealPhotoCredit();
-  startCountdown(8, nextQuestion);
+  startCountdown(allIn ? 1 : 8, nextQuestion);
 }
 
 function judge(id, i) {
@@ -622,7 +636,7 @@ function reveal(pickedIdx) {
   $("statusTxt").innerHTML += ' <span class="mono" style="color:var(--dim)">· next question in…</span>';
   broadcast({ t: "reveal", a: "ABCD"[cur.a], text: cur.opts[cur.a] });
   renderBoard(); revealPhotoCredit();
-  startCountdown(8, nextQuestion);
+  startCountdown(allIn ? 1 : 8, nextQuestion);
 }
 
 function endQuiz() {
